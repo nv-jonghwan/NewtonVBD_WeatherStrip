@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "newton-vbd-weatherstrip"
+version = "0.2.0"
+description = "Dual FANUC and Robotiq manipulation of stacked elastic door seals with Newton VBD and MuJoCo Warp"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+license = "Apache-2.0"
+license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
+dependencies = [
+    "newton[sim]==1.5.0",
+    "warp-lang==1.16.0",
+    "mujoco==3.11.0",
+    "mujoco-warp==3.11.0",
+    "numpy==2.3.1",
+    "usd-core==25.11",
+    "newton-usd-schemas==0.4.1",
+    "scipy==1.17.0",
+    "trimesh==4.11.1",
+    "pyglet==2.1.16",
+]
+
+[project.optional-dependencies]
+dev = ["ruff==0.15.7"]
+
+[project.urls]
+Repository = "https://github.com/nv-jonghwan/NewtonVBD_WeatherStrip"
+Issues = "https://github.com/nv-jonghwan/NewtonVBD_WeatherStrip/issues"
+
+[project.scripts]
+weatherstrip-demo = "newton_weatherstrip.simulation:main"
+weatherstrip-doctor = "newton_weatherstrip.doctor:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 120
+exclude = [".workspace", "assets", "results"]
+
+[tool.ruff.lint]
+select = ["E9", "F63", "F7", "F82"]

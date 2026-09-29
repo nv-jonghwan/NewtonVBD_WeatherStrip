@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "backend": "Newton 1.5 SolverVBD",
+  "units": "SI",
+  "material_calibrated": false,
+  "weatherstrip": {
+    "segments": 64,
+    "minor_radius_m": 0.22,
+    "rest_radius_m": 0.28,
+    "cross_section_radius_m": 0.01,
+    "total_mass_kg": 0.4,
+    "stretch_stiffness_n_m": 5000.0,
+    "stretch_damping_n_s_m": 0.1,
+    "shear_stiffness_n_m": 5000.0,
+    "shear_damping_n_s_m": 0.1,
+    "bend_stiffness_n_m": 1.2,
+    "bend_damping_n_m_s": 0.024,
+    "twist_stiffness_n_m": 0.4,
+    "twist_damping_n_m_s": 0.008,
+    "friction": 2.0
+  },
+  "assumptions": [
+    "Circular solid beam surrogate for weatherstrip cross section",
+    "Elastic bend/shear/stretch/twist and viscous damping",
+    "No measured EPDM hysteresis, compression or aging response"
+  ],
+  "adapter": "../../src/newton_weatherstrip/simulation.py"
+}

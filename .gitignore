@@ -1,0 +1,24 @@
+# Machine-specific environments, bindings and caches
+.workspace/
+.venv*/
+.cache/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.env
+.env.*
+!.env.example
+
+# Runtime output is regenerated; curated evidence lives in docs/validation/
+results/
+
+# Download third-party robot assets using the checksum manifest
+assets/fanuc/
+assets/robotiq_2f85/
+
+# Historical local prototype, retained on disk but not part of this product
+assets/parallel_gripper.usda
+scripts/build_gripper.py
+scripts/fetch_fanuc.py

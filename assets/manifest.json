@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "sources": {
+    "fanuc": {
+      "url": "https://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/6.0/Isaac/Robots/Fanuc/crx10ia_l/crx10ia_l.usd",
+      "terms": "https://www.nvidia.com/en-us/agreements/enterprise-software/3d-content-sharing-agreement/"
+    },
+    "robotiq": {
+      "repository": "https://github.com/NVIDIA/simready-foundation",
+      "commit": "0ed0dfbc539c9de99289771bd6848effe3ef5779",
+      "license": "https://github.com/NVIDIA/simready-foundation/blob/0ed0dfbc539c9de99289771bd6848effe3ef5779/LICENSE.txt"
+    }
+  },
+  "files": [
+    {
+      "path": "assets/fanuc/crx10ia_l.usd",
+      "url": "https://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/6.0/Isaac/Robots/Fanuc/crx10ia_l/crx10ia_l.usd",
+      "sha256": "243e9e6ad47a8289dbd9fea0bce1ea3a52d2273398340b31ba9d6892fc9c2fd1"
+    },
+    {
+      "path": "assets/fanuc/configuration/crx10ia_l_base.usd",
+      "url": "https://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/6.0/Isaac/Robots/Fanuc/crx10ia_l/configuration/crx10ia_l_base.usd",
+      "sha256": "ac61e1e0b4cfa7fa678f2aaff45e2d770eec6de900a2d33dc0365737a02fb299"
+    },
+    {
+      "path": "assets/fanuc/configuration/crx10ia_l_physics.usd",
+      "url": "https://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/6.0/Isaac/Robots/Fanuc/crx10ia_l/configuration/crx10ia_l_physics.usd",
+      "sha256": "ee18afe6a6b94ea2403264c3f4d57138498ea22688d87a2f1c644d825dfba3b6"
+    },
+    {
+      "path": "assets/fanuc/configuration/crx10ia_l_sensor.usd",
+      "url": "https://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/6.0/Isaac/Robots/Fanuc/crx10ia_l/configuration/crx10ia_l_sensor.usd",
+      "sha256": "2b7281c13ab39d1efc6967efc119a635680c55583fb906b8ee30434cf791c37c"
+    },
+    {
+      "path": "assets/robotiq_2f85/.thumbs/256x256/Robotiq_2F_85.usda.png",
+      "url": "https://media.githubusercontent.com/media/NVIDIA/simready-foundation/0ed0dfbc539c9de99289771bd6848effe3ef5779/sample_content/common_assets/robots_general/Robotiq/2F-85/simready_isaac_usd/.thumbs/256x256/Robotiq_2F_85.usda.png",
+      "sha256": "08845ddfb40e8e4bf4051d732d7a199b85f3f3e396094f2bd503effae8e0f338"
+    },
+    {
+      "path": "assets/robotiq_2f85/Robotiq_2F_85.usda",
+      "url": "https://media.githubusercontent.com/media/NVIDIA/simready-foundation/0ed0dfbc539c9de99289771bd6848effe3ef5779/sample_content/common_assets/robots_general/Robotiq/2F-85/simready_isaac_usd/Robotiq_2F_85.usda",
+      "sha256": "79a5b7b56fff687440ab7227d92e23078fed7d5f7465b5bc193e127a7ae8331a"
+    },
+    {
+      "path": "assets/robotiq_2f85/payloads/Physics/None.usda",
+      "url": "https://media.githubusercontent.com/media/NVIDIA/simready-foundation/0ed0dfbc539c9de99289771bd6848effe3ef5779/sample_content/common_assets/robots_general/Robotiq/2F-85/simready_isaac_usd/payloads/Physics/None.usda",
+      "sha256": "0970f19ce089677c9489067ceb5895c48b1ef0bebcc496a1422f837bb0bef458"
+    },
+    {
+      "path": "assets/robotiq_2f85/payloads/Physics/Physics.usda",
+      "url": "https://media.githubusercontent.com/media/NVIDIA/simready-foundation/0ed0dfbc539c9de99289771bd6848effe3ef5779/sample_content/common_assets/robots_general/Robotiq/2F-85/simready_isaac_usd/payloads/Physics/Physics.usda",
+      "sha256": "ab91b97a73bf3468e5a60f9bca77e825ca0707e5809cb5d742eb34d6239050a0"
+    },
+    {
+      "path": "assets/robotiq_2f85/payloads/Physics/Physx_Loop.usda",
+      "url": "https://media.githubusercontent.com/media/NVIDIA/simready-foundation/0ed0dfbc539c9de99289771bd6848effe3ef5779/sample_content/common_assets/robots_general/Robotiq/2F-85/simready_isaac_usd/payloads/Physics/Physx_Loop.usda",
+      "sha256": "86a273db96109c19c6d2bdc74df5e2850f9e532cfe9ef41cf71d3bb299259438"
+    },
+    {
+      "path": "assets/robotiq_2f85/payloads/Physics/Physx_Mimic.usda",
+      "url": "https://media.githubusercontent.com/media/NVIDIA/simready-foundation/0ed0dfbc539c9de99289771bd6848effe3ef5779/sample_content/common_assets/robots_general/Robotiq/2F-85/simready_isaac_usd/payloads/Physics/Physx_Mimic.usda",
+      "sha256": "b7bb9741f1a9fe36df301f284abd7b8341ab5bf46ffbffbc3d654561c62ad9c6"
+    },
+    {
+      "path": "assets/robotiq_2f85/payloads/base.usda",
+      "url": "https://media.githubusercontent.com/media/NVIDIA/simready-foundation/0ed0dfbc539c9de99289771bd6848effe3ef5779/sample_content/common_assets/robots_general/Robotiq/2F-85/simready_isaac_usd/payloads/base.usda",
+      "sha256": "dde9c06d339b3afa365edd19ab1566b3fa00b161ad56207c9d0a5363f677d3b6"
+    },
+    {
+      "path": "assets/robotiq_2f85/payloads/geometries.usd",
+      "url": "https://media.githubusercontent.com/media/NVIDIA/simready-foundation/0ed0dfbc539c9de99289771bd6848effe3ef5779/sample_content/common_assets/robots_general/Robotiq/2F-85/simready_isaac_usd/payloads/geometries.usd",
+      "sha256": "461b2c9fb4cb14d12c56abf7f0b743b6ea22dd76a2f577d3d4cf4454018d77d7"
+    },
+    {
+      "path": "assets/robotiq_2f85/payloads/instances.usda",
+      "url": "https://media.githubusercontent.com/media/NVIDIA/simready-foundation/0ed0dfbc539c9de99289771bd6848effe3ef5779/sample_content/common_assets/robots_general/Robotiq/2F-85/simready_isaac_usd/payloads/instances.usda",
+      "sha256": "3bc178836fac2b08e88694dcdaf3b59faca04ed668130693ea7f8d96d80e8c0c"
+    },
+    {
+      "path": "assets/robotiq_2f85/payloads/materials.usda",
+      "url": "https://media.githubusercontent.com/media/NVIDIA/simready-foundation/0ed0dfbc539c9de99289771bd6848effe3ef5779/sample_content/common_assets/robots_general/Robotiq/2F-85/simready_isaac_usd/payloads/materials.usda",
+      "sha256": "ff3e3959dd61ca8814a305c77e97af994cd9fe3fee85e1b394fcb89367a8b9ad"
+    },
+    {
+      "path": "assets/robotiq_2f85/payloads/robot.usda",
+      "url": "https://media.githubusercontent.com/media/NVIDIA/simready-foundation/0ed0dfbc539c9de99289771bd6848effe3ef5779/sample_content/common_assets/robots_general/Robotiq/2F-85/simready_isaac_usd/payloads/robot.usda",
+      "sha256": "91ec4acc9f040120e52d50bb91c503d3a5e4e7407ed7d834a91a35b590607ed2"
+    }
+  ]
+}
