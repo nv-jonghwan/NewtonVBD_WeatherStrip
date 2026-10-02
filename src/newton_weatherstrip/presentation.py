@@ -128,7 +128,7 @@ class Presentation:
         UsdGeom.Xformable(key).AddRotateXYZOp().Set(Gf.Vec3f(-35, -25, -20))
         self.stage.SetEndTimeCode(sim.config.full_cycle_frames)
         self.stage.GetDefaultPrim().SetCustomDataByKey(
-            "weatherstrip:physics", "Newton 1.5 SolverCoupledADMM(MuJoCo,VBD); live physical finger contact"
+            "weatherstrip:physics", "Newton 1.6 SolverCoupledADMM(MuJoCo,VBD); live physical finger contact"
         )
         self.stage.GetDefaultPrim().SetCustomDataByKey(
             "weatherstrip:calibration", "Qualitative EPDM-like rod; uncalibrated material, no certification claim"

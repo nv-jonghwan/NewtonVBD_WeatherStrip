@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "backend": "Newton 1.5 SolverVBD",
+  "backend": "Newton 1.6 SolverVBD",
   "units": "SI",
   "material_calibrated": false,
   "weatherstrip": {

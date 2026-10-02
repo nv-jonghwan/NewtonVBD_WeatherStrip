@@ -34,7 +34,7 @@ root.GetPrim().SetCustomData(
         "material_calibrated": False,
         "physics_backend": "Newton VBD closed Cosserat rod",
         "conformance": "Simulation-ready example; not formally SimReady certified",
-        "schema_support": "Pinned Newton 1.5 deformable proposal importer",
+        "schema_support": "Pinned Newton 1.6 deformable proposal importer",
     }
 )
 points = np.asarray(ring_points(w.segments, w.rest_radius_m, 0.0, w.minor_radius_m), dtype=np.float32)
@@ -87,7 +87,7 @@ root.GetPrim().CreateAttribute("weatherstrip:runtimeProfile", Sdf.ValueTypeNames
 )
 profile = {
     "schema_version": 1,
-    "backend": "Newton 1.5 SolverVBD",
+    "backend": "Newton 1.6 SolverVBD",
     "units": "SI",
     "material_calibrated": False,
     "weatherstrip": dataclasses.asdict(w),

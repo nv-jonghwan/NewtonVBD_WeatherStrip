@@ -1,18 +1,19 @@
 {
-  "schema_version": 1,
-  "date": "2026-09-29",
+  "schema_version": 2,
+  "date": "2026-10-02",
   "scope": "Example scene validation; not material calibration or a hardware-independent benchmark.",
   "environment": {
     "os": "Ubuntu 24.04.4 LTS x86_64",
     "python": "3.12",
     "gpu": "NVIDIA RTX 6000 Ada 48 GB",
     "driver": "595.91.07",
-    "newton": "1.5.0",
-    "warp": "1.16.0",
-    "mujoco": "3.11.0",
-    "mujoco_warp": "3.11.0",
+    "newton": "1.6.0",
+    "warp": "1.17.0",
+    "mujoco": "3.12.0",
+    "mujoco_warp": "3.12.0",
     "isaac_sim": "6.0.1.0",
-    "isaaclab_commit": "2e44ddb2e19536579140496023b5ccb060bc4152"
+    "isaaclab_commit": "2e44ddb2e19536579140496023b5ccb060bc4152",
+    "newton_usd_schemas": "0.5.0"
   },
   "fresh_compute_environment": {
     "validation_passed": true,
@@ -22,30 +23,30 @@
     "finite_body_state": true,
     "finite_joint_state": true,
     "freefall_observed": true,
-    "maximum_minimum_segment_lift_m": 0.26060871124267576,
-    "observed_max_weatherstrip_span_m": 0.7606790065765381,
-    "max_centerline_strain_proxy": 0.07485025608872986,
+    "maximum_minimum_segment_lift_m": 0.26212690114974974,
+    "observed_max_weatherstrip_span_m": 0.7611624002456665,
+    "max_centerline_strain_proxy": 0.07364189810514099,
     "lower_maximum_centroid_lift_m": [
-      0.002260293960571258,
+      0.0022306108474731134,
       0.0
     ],
-    "release_clearance_above_lower_seals_m": 0.15175144374370575,
-    "peak_rigid_contacts": 415,
+    "release_clearance_above_lower_seals_m": 0.15227068960666656,
+    "peak_rigid_contacts": 410,
     "rigid_contact_capacity": 8192,
     "final_second_mean_rms_speed_m_s": [
-      0.0005570835620362186,
-      0.001145689587416601,
-      0.0012944203439381732
+      0.0005358183787054367,
+      0.0010452395180729612,
+      0.0010417174198664725
     ],
     "final_second_max_node_speed_m_s": [
-      0.006662657950073481,
-      0.011389103718101978,
-      0.011480817571282387
+      0.002684152452275157,
+      0.00394933857023716,
+      0.003460625186562538
     ]
   },
   "recording": {
     "status": "passed",
-    "recording": "product_cycle.usd",
+    "recording": "newton16_cycle.usd",
     "tracks": [
       {
         "layer": 0,
@@ -76,52 +77,111 @@
   },
   "public_assets": {
     "files_verified": 15,
-    "fresh_download_sha256_verified": true
-  },
-  "prior_development_observations": {
-    "stack_settling": {
-      "top_mean_rms_speed_12_to_13_s_before_m_s": 0.01685,
-      "top_mean_rms_speed_12_to_13_s_after_m_s": 0.00213,
-      "extended_run_time_s": 19.98333333333348,
-      "extended_run_final_second_rms_m_s": [
-        0.0004929397507415464,
-        0.0010222103592241183,
-        0.0009601583515177481
-      ],
-      "validation_passed": true
-    },
-    "performance": {
-      "baseline_single_seal_pipeline_fps": 6.0579190414537,
-      "final_three_seal_pipeline_fps": 30.425240873676017,
-      "pipeline_excludes_kit": true,
-      "warmup_frames": 10,
-      "measured_frames": 90,
-      "gui_full_cycle_mean_fps": 19.954320578868604,
-      "note": "Historical observations from different scene revisions; concurrent GPU load was not controlled."
-    }
+    "validation": "Existing pinned assets checked offline; fresh download evidence belongs to the prior 1.5 validation."
   },
   "material_calibrated": false,
   "official_simready_certification": false,
-  "pinned_unmodified_isaaclab_gui": {
+  "isaaclab_gui_capture": {
     "validation_passed": true,
     "simulated_time_s": 13.050000000000228,
-    "mean_fps_including_startup_frames": 20.835779550018486,
-    "final_second_mean_rms_speed_m_s": [
-      0.00040827083186309595,
-      0.0014038091186055186,
-      0.0011982288412844479
+    "stack_count": 3,
+    "total_elastic_body_count": 192,
+    "finite_body_state": true,
+    "finite_joint_state": true,
+    "freefall_observed": true,
+    "maximum_minimum_segment_lift_m": 0.2613502526283264,
+    "observed_max_weatherstrip_span_m": 0.7616455554962158,
+    "max_centerline_strain_proxy": 0.07379459020084833,
+    "lower_maximum_centroid_lift_m": [
+      0.0022753143310546564,
+      0.0
     ],
-    "scope": "Existing Isaac Sim package environment with unmodified pinned Isaac Lab source, installed Newton package, and explicit runtime paths; not a fresh installation of every GUI dependency."
+    "release_clearance_above_lower_seals_m": 0.1545550376176834,
+    "peak_rigid_contacts": 409,
+    "rigid_contact_capacity": 8192,
+    "final_second_mean_rms_speed_m_s": [
+      0.000562985750779478,
+      0.0015708645726790873,
+      0.0027271067956462502
+    ],
+    "final_second_max_node_speed_m_s": [
+      0.001836634473875165,
+      0.0045586396008729935,
+      0.007611636538058519
+    ],
+    "scope": "Live displayed full cycle with PNG capture; not a GUI throughput benchmark. Existing Isaac Sim environment with isolated Newton 1.6 package overlay."
   },
-  "relocated_product_export": {
-    "source_path_verified": true,
-    "cpu_tests_passed": 4,
-    "robot_import": {
-      "bodies": 32,
-      "joints": 32,
-      "coordinates": 24,
-      "mimic_constraints": 10
+  "animated_preview": {
+    "file": "docs/media/dual-arm-cycle.gif",
+    "frames": 197,
+    "physics_fps": 60,
+    "capture_stride": 4,
+    "playback_fps": 15,
+    "width": 960,
+    "height": 540,
+    "loop": "infinite",
+    "source": "Actual Isaac Lab viewport, Newton 1.6 simulation, complete validated cycle",
+    "bytes": 17110240,
+    "sha256": "c5266f64e9d46d94c5421d3e706228ce841eaec604e0b61062c25cb852e61b37",
+    "duration_s": 13.14
+  },
+  "prior_newton_1_5_validation": {
+    "date": "2026-09-29",
+    "environment": {
+      "os": "Ubuntu 24.04.4 LTS x86_64",
+      "python": "3.12",
+      "gpu": "NVIDIA RTX 6000 Ada 48 GB",
+      "driver": "595.91.07",
+      "newton": "1.5.0",
+      "warp": "1.16.0",
+      "mujoco": "3.11.0",
+      "mujoco_warp": "3.11.0",
+      "isaac_sim": "6.0.1.0",
+      "isaaclab_commit": "2e44ddb2e19536579140496023b5ccb060bc4152"
     },
-    "workstation_binding_required": false
+    "prior_development_observations": {
+      "stack_settling": {
+        "top_mean_rms_speed_12_to_13_s_before_m_s": 0.01685,
+        "top_mean_rms_speed_12_to_13_s_after_m_s": 0.00213,
+        "extended_run_time_s": 19.98333333333348,
+        "extended_run_final_second_rms_m_s": [
+          0.0004929397507415464,
+          0.0010222103592241183,
+          0.0009601583515177481
+        ],
+        "validation_passed": true
+      },
+      "performance": {
+        "baseline_single_seal_pipeline_fps": 6.0579190414537,
+        "final_three_seal_pipeline_fps": 30.425240873676017,
+        "pipeline_excludes_kit": true,
+        "warmup_frames": 10,
+        "measured_frames": 90,
+        "gui_full_cycle_mean_fps": 19.954320578868604,
+        "note": "Historical observations from different scene revisions; concurrent GPU load was not controlled."
+      }
+    },
+    "pinned_unmodified_isaaclab_gui": {
+      "validation_passed": true,
+      "simulated_time_s": 13.050000000000228,
+      "mean_fps_including_startup_frames": 20.835779550018486,
+      "final_second_mean_rms_speed_m_s": [
+        0.00040827083186309595,
+        0.0014038091186055186,
+        0.0011982288412844479
+      ],
+      "scope": "Existing Isaac Sim package environment with unmodified pinned Isaac Lab source, installed Newton package, and explicit runtime paths; not a fresh installation of every GUI dependency."
+    },
+    "relocated_product_export": {
+      "source_path_verified": true,
+      "cpu_tests_passed": 4,
+      "robot_import": {
+        "bodies": 32,
+        "joints": 32,
+        "coordinates": 24,
+        "mimic_constraints": 10
+      },
+      "workstation_binding_required": false
+    }
   }
 }

@@ -11,7 +11,7 @@ def Xform "Weatherstrip" (
         string conformance = "Simulation-ready example; not formally SimReady certified"
         bool material_calibrated = 0
         string physics_backend = "Newton VBD closed Cosserat rod"
-        string schema_support = "Pinned Newton 1.5 deformable proposal importer"
+        string schema_support = "Pinned Newton 1.6 deformable proposal importer"
     }
 )
 {

@@ -4,9 +4,9 @@
 
 FANUC CRX-10iA/L 두 대와 Robotiq 2F-85 그리퍼가 테이블에 쌓인 웨더스트립 세 개 중 맨 위 하나를 집습니다. 들어 올려 양쪽으로 늘리고, 다시 느슨하게 늘어뜨린 다음 공중에서 그리퍼를 열어 아래 두 개 위로 떨어뜨립니다. 로봇 관절, 탄성 변형, 마찰 접촉, 중력 낙하를 계산하고 그 결과를 Isaac Lab GUI에 표시합니다.
 
-![Isaac Lab GUI에서 양쪽 Robotiq으로 맨 위 웨더스트립을 들어 늘리는 장면](docs/media/dual-arm-stretch.png)
+![Newton 1.6으로 계산한 양팔 집기·인장·개방·자유낙하 전체 동작](docs/media/dual-arm-cycle.gif)
 
-*실제 Isaac Lab 뷰포트 캡처. 위 고무만 양쪽 그리퍼에 잡혀 있으며 아래 두 개는 테이블에 남아 있습니다. 미리 만든 변형 애니메이션이 아니라 Newton이 계산한 상태입니다.*
+*Newton 1.6.0 / Warp 1.17.0의 실제 Isaac Lab 뷰포트 기록입니다. 집기 → 들어 올리기 → 인장 → 복원 → 개방·자유낙하 → 적층 안정화를 반복 재생합니다. 60 Hz 물리 상태를 4프레임마다 캡처해 15 FPS로 재생하므로 물리 시간 기준 1배속이며, GUI 처리 속도를 뜻하지 않습니다.*
 
 | 항목 | 구현 |
 | --- | --- |
@@ -167,7 +167,7 @@ $$
 \mathcal L_{\mathrm{aug}}=E+\lambda^{\mathsf T}C+\frac{\rho_c}{2}\lVert C\rVert^2
 $$
 
-기본 구현에서 케이블의 인장·전단·굽힘·비틀림은 유한 강성을 가진 soft 모드이며, 강체 접촉은 hard 모드를 사용합니다. `builder.color()`가 필수이고, 감쇠 계수 `kd`는 절대 물리 단위로 해석합니다. [Newton SolverVBD API](https://newton-physics.github.io/newton/1.5.0/api/_generated/newton.solvers.SolverVBD.html), [AVBD 원 논문](https://graphics.cs.utah.edu/research/projects/avbd/)
+기본 구현에서 케이블의 인장·전단·굽힘·비틀림은 유한 강성을 가진 soft 모드이며, 강체 접촉은 hard 모드를 사용합니다. `builder.color()`가 필수이고, 감쇠 계수 `kd`는 절대 물리 단위로 해석합니다. [Newton SolverVBD API](https://newton-physics.github.io/newton/1.6.0/api/_generated/newton.solvers.SolverVBD.html), [AVBD 원 논문](https://graphics.cs.utah.edu/research/projects/avbd/)
 
 VBD 논문의 안정성 논의를 곧바로 이 전체 장면의 무조건적인 성공 보장으로 확대하면 안 됩니다. 본 장면은 유한 반복, 접촉 검출, 관절 구동, 서로 다른 솔버의 결합을 포함합니다. 반복 수를 너무 줄이거나 접촉 강성을 과도하게 높이면 미끄러짐·잔진동·제약 오차가 발생할 수 있습니다.
 
@@ -194,7 +194,7 @@ $$
 
 Robotiq의 주 관절 하나를 구동하면 mimic equality가 나머지 손가락 관절을 연동합니다. 이 예제는 접촉 하중 아래에서 수동 관절이 과도하게 벌어지지 않도록 `eq_solref=[0.004,1.0]`, `eq_solimp=[0.99,0.99,0.001,0.5,2.0]`를 설정합니다. 이는 예제의 솔버 튜닝값이며 제조사 제어기 사양을 재현한 값은 아닙니다.
 
-`use_mujoco_contacts=False`는 모든 접촉을 끈다는 의미가 아닙니다. Newton/결합 솔버가 관리하는 접촉 경로를 사용한다는 뜻입니다. 특히 고무–그리퍼의 교차 솔버 접촉은 다음 ADMM 인터페이스가 담당합니다. [Newton MuJoCo 문서](https://newton-physics.github.io/newton/1.5.0/solvers/mujoco.html), [MuJoCo Warp](https://github.com/google-deepmind/mujoco_warp)
+`use_mujoco_contacts=False`는 모든 접촉을 끈다는 의미가 아닙니다. Newton/결합 솔버가 관리하는 접촉 경로를 사용한다는 뜻입니다. 특히 고무–그리퍼의 교차 솔버 접촉은 다음 ADMM 인터페이스가 담당합니다. [Newton MuJoCo 문서](https://newton-physics.github.io/newton/1.6.0/solvers/mujoco.html), [MuJoCo Warp](https://github.com/google-deepmind/mujoco_warp)
 
 ### 3.4 ADMM으로 두 솔버 결합하기
 
@@ -230,7 +230,7 @@ SolverCoupledADMM.Config(
 )
 ```
 
-ADMM은 소유권이 다른 물체의 접촉 행을 내부 검출 경로에서 구성하고, 마찰 접촉에서 최대 소산을 따르는 Coulomb 투영을 사용합니다. VBD가 계산하는 고무끼리의 접촉과 이 교차 접촉을 구분해야 합니다. `rho`는 인터페이스의 수치적 penalty이며 고무의 Young 계수나 N/m 단위의 접촉 스프링 강성과 동일한 값이 아닙니다. 고정된 반복 예산을 사용하므로 매 substep의 완전 수렴을 주장하지 않습니다. [Newton 결합 솔버 문서](https://newton-physics.github.io/newton/1.5.0/concepts/coupling.html)
+ADMM은 소유권이 다른 물체의 접촉 행을 내부 검출 경로에서 구성하고, 마찰 접촉에서 최대 소산을 따르는 Coulomb 투영을 사용합니다. VBD가 계산하는 고무끼리의 접촉과 이 교차 접촉을 구분해야 합니다. `rho`는 인터페이스의 수치적 penalty이며 고무의 Young 계수나 N/m 단위의 접촉 스프링 강성과 동일한 값이 아닙니다. 고정된 반복 예산을 사용하므로 매 substep의 완전 수렴을 주장하지 않습니다. [Newton 결합 솔버 문서](https://newton-physics.github.io/newton/1.6.0/concepts/coupling.html)
 
 ### 3.5 적층 안정화와 접촉 계수
 
@@ -319,9 +319,9 @@ USD의 주요 prim은 다음과 같습니다.
 | OS | Ubuntu 24.04.4 LTS, Linux x86-64 |
 | Python | 3.12 |
 | GPU / 드라이버 | NVIDIA RTX 6000 Ada 48 GB / 595.91.07 |
-| Newton | 1.5.0, upstream tag `v1.5.0` |
-| Warp | 1.16.0 |
-| MuJoCo / MuJoCo Warp | 각각 3.11.0 |
+| Newton | 1.6.0, upstream tag `v1.6.0` |
+| Warp | 1.17.0 |
+| MuJoCo / MuJoCo Warp | 각각 3.12.0 |
 | NumPy / OpenUSD | 2.3.1 / `usd-core` 25.11 |
 | Isaac Sim | 6.0.1.0 |
 | Isaac Lab 소스 | commit `2e44ddb2e19536579140496023b5ccb060bc4152` |
@@ -388,7 +388,7 @@ export WEATHERSTRIP_ISAACLAB="$PWD/.cache/IsaacLab"
 ./scripts/run_isaaclab.sh
 ```
 
-이 예제는 `AppLauncher`만 사용하고 학습 환경의 전체 설치 집합을 요구하지 않습니다. 실행 래퍼가 `WEATHERSTRIP_ISAACLAB/source/*`를 Python 경로에 추가합니다. 해당 Isaac Lab commit의 전체 `setup.py`에는 Warp 1.13.0 의존성이 있으므로, 이를 무조건 함께 설치하면 본 예제의 Newton 1.5 / Warp 1.16 조합과 충돌합니다. 학습용 Isaac Lab 환경에 통합할 때에는 별도 호환성 검증이 필요합니다.
+이 예제는 `AppLauncher`만 사용하고 학습 환경의 전체 설치 집합을 요구하지 않습니다. 실행 래퍼가 `WEATHERSTRIP_ISAACLAB/source/*`를 Python 경로에 추가합니다. 해당 Isaac Lab commit의 전체 `setup.py`에는 Warp 1.13.0 의존성이 있으므로, 이를 무조건 함께 설치하면 본 예제의 Newton 1.6 / Warp 1.17 조합과 충돌합니다. 학습용 Isaac Lab 환경에 통합할 때에는 별도 호환성 검증이 필요합니다.
 
 GUI 검증에는 기존 Isaac Sim 설치와 **수정하지 않은 고정 Isaac Lab 소스**를 사용합니다. 위 GUI 패키지 전체를 모든 시스템에서 자동 설치해 주는 통합 설치기나 Docker 이미지를 제공하는 것은 아닙니다. NVIDIA EULA 확인과 첫 실행 shader 준비는 Isaac Sim의 안내를 따릅니다. [Isaac Lab 설치 안내](https://isaac-sim.github.io/IsaacLab/v3.0.0-beta2/source/setup/installation/pip_installation.html)
 
@@ -435,6 +435,18 @@ WEATHERSTRIP_DEVICE=cuda:1 WEATHERSTRIP_RENDER_GPU=0 \
 - 상태 표시: 동작 단계, 물리 시간, 고무 폭, FPS, 물리·USD 갱신 비용.
 
 60 Hz는 물리 시간 간격의 기준입니다. 예를 들어 GUI가 20 FPS이면 물리 시간 1초를 진행하는 데 실제 약 3초가 걸립니다. GUI FPS와 실시간 배속 1.0을 혼동하지 않아야 합니다.
+
+### README 동작 GIF 재생성
+
+GUI 환경과 FFmpeg가 필요합니다. 프레임 폴더는 비어 있어야 하며, 완료·물리 검증에 통과한 기록만 GIF로 변환합니다. 카메라는 기록 동안 고정됩니다.
+
+```bash
+./scripts/run_isaaclab.sh --capture-dir results/demo-frames \
+  --camera scene --capture-stride 4 --exit-after-cycle
+python3 scripts/make_demo_gif.py results/demo-frames results/dual-arm-cycle.gif
+```
+
+생성 파일을 확인한 뒤 `docs/media/dual-arm-cycle.gif`로 복사합니다. `capture.json`에는 엔진 버전, 물리 시간, 단계별 프레임과 검증 결과가 기록됩니다. GIF는 960 px 너비, 15 FPS, 무한 반복이며 원본 PNG는 Git에 포함하지 않습니다.
 
 ### 기록과 검증
 
@@ -519,7 +531,7 @@ GitHub Actions는 CPU에서 표면 회귀, 자산 manifest 무결성, Python 및
 
 ### 관측 결과
 
-새 계산 전용 가상환경에서 기본 13.05초 전체 사이클이 통과했습니다. 전체 고무 상승은 약 0.261 m, 최대 폭은 약 0.761 m였고, 최대 rigid contact 수는 415 / 8,192였습니다. 마지막 1초 평균 RMS 속도는 아래에서부터 약 0.56 / 1.15 / 1.29 mm/s였습니다. 고정된 Isaac Lab 원본 소스로 실행한 GUI에서도 전체 사이클이 통과했습니다.
+Newton 1.6.0의 새 계산 전용 가상환경에서 기본 13.05초 전체 사이클이 통과했습니다. 전체 고무 상승은 약 0.262 m, 최대 폭은 약 0.761 m였고, 최대 rigid contact 수는 410 / 8,192였습니다. 마지막 1초 평균 RMS 속도는 아래에서부터 약 0.54 / 1.05 / 1.04 mm/s였습니다. 고정된 Isaac Lab 원본 소스로 실행한 GUI에서도 전체 사이클이 통과했습니다.
 
 적층 안정화의 비교 지표는 구간 중심의 프레임 간 변위로부터 계산합니다.
 
@@ -528,9 +540,11 @@ v_{i,n}=\frac{\lVert p_{i,n}-p_{i,n-1}\rVert}{\Delta t_{\mathrm{frame}}},\qquad
 v_{\mathrm{RMS},n}=\sqrt{\frac{1}{N}\sum_i v_{i,n}^2}
 $$
 
-동일한 12–13초 구간에서 최상단 씰의 평균 RMS 속도는 **16.85 → 2.13 mm/s**로 감소했습니다. 20초까지 물리를 계속 계산했을 때에는 약 **0.96 mm/s**였습니다. 정지 판정으로 속도를 없앤 결과가 아닙니다. 이 수치는 예시 재료와 장면의 관측값이며 실측 재료 검증값은 아닙니다. 공개용 지표는 [docs/validation/reference-results.json](docs/validation/reference-results.json)에 정리했습니다.
+Newton 1.5 개발 당시 동일한 12–13초 구간에서 최상단 씰의 평균 RMS 속도는 **16.85 → 2.13 mm/s**로 감소했습니다. 20초까지 물리를 계속 계산했을 때에는 약 **0.96 mm/s**였습니다. 정지 판정으로 속도를 없앤 결과가 아닙니다. 이 수치는 예시 재료와 장면의 관측값이며 실측 재료 검증값은 아닙니다. 공개용 지표는 [docs/validation/reference-results.json](docs/validation/reference-results.json)에 정리했습니다.
 
 ### 성능 개선
+
+아래 비교는 Newton 1.5 개발 당시의 기록입니다. Newton 1.6의 재검증 결과와 구분합니다. GIF 캡처 중의 처리 속도는 성능 측정으로 사용하지 않습니다.
 
 | 측정 경로 | 이전 | 개선 후 |
 | --- | ---: | ---: |
@@ -627,8 +641,8 @@ NewtonVBD_WeatherStrip/
 | VBD | Chen et al., *Vertex Block Descent*, SIGGRAPH 2024 — [프로젝트와 논문](https://graphics.cs.utah.edu/research/projects/vbd/) |
 | AVBD | Giles et al., *Augmented Vertex Block Descent*, SIGGRAPH 2025 — [프로젝트와 논문](https://graphics.cs.utah.edu/research/projects/avbd/) |
 | ADMM | Boyd et al., *Distributed Optimization and Statistical Learning via ADMM*, 2011 — [원문](https://stanford.edu/~boyd/papers/admm_distr_stats.html) |
-| Newton 1.5 | [소스](https://github.com/newton-physics/newton/tree/v1.5.0), [VBD API](https://newton-physics.github.io/newton/1.5.0/api/_generated/newton.solvers.SolverVBD.html), [결합 솔버](https://newton-physics.github.io/newton/1.5.0/concepts/coupling.html) |
-| MuJoCo Warp | [공식 저장소](https://github.com/google-deepmind/mujoco_warp), [Newton 어댑터](https://newton-physics.github.io/newton/1.5.0/solvers/mujoco.html) |
+| Newton 1.6 | [소스](https://github.com/newton-physics/newton/tree/v1.6.0), [VBD API](https://newton-physics.github.io/newton/1.6.0/api/_generated/newton.solvers.SolverVBD.html), [결합 솔버](https://newton-physics.github.io/newton/1.6.0/concepts/coupling.html) |
+| MuJoCo Warp | [공식 저장소](https://github.com/google-deepmind/mujoco_warp), [Newton 어댑터](https://newton-physics.github.io/newton/1.6.0/solvers/mujoco.html) |
 | Isaac Lab | [공식 저장소](https://github.com/isaac-sim/IsaacLab), [검증 소스 commit](https://github.com/isaac-sim/IsaacLab/tree/2e44ddb2e19536579140496023b5ccb060bc4152) |
 | 로봇 자산 | [NVIDIA Isaac Sim 로봇 안내](https://docs.isaacsim.omniverse.nvidia.com/latest/assets/usd_assets_robots_manipulator.html), [SimReady Foundation](https://github.com/NVIDIA/simready-foundation) |
 

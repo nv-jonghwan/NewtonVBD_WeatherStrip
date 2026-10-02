@@ -5,6 +5,7 @@ The standard timeline Play/Pause and the WeatherStrip panel control the same clo
 """
 
 import argparse
+import asyncio
 from pathlib import Path
 
 from isaaclab.app import AppLauncher
@@ -14,8 +15,19 @@ parser.add_argument("--config", default=str(Path(__file__).resolve().parents[1] 
 parser.add_argument("--auto-play", action="store_true")
 parser.add_argument("--pause-at", type=float, default=None)
 parser.add_argument("--smoke-frames", type=int, default=0)
+parser.add_argument("--capture-dir", type=Path, help="Save a complete cycle as numbered viewport PNGs.")
+parser.add_argument("--capture-stride", type=int, default=4, help="Physics frames per capture (60/4 = 15 FPS).")
+parser.add_argument("--camera", choices=("scene", "close"), default="scene")
+parser.add_argument("--exit-after-cycle", action="store_true")
 AppLauncher.add_app_launcher_args(parser)
 cli = parser.parse_args()
+if cli.capture_stride < 1:
+    parser.error("--capture-stride must be positive")
+if cli.capture_dir:
+    cli.capture_dir = cli.capture_dir.resolve()
+    if cli.capture_dir.exists() and any(cli.capture_dir.iterdir()):
+        parser.error("--capture-dir must be empty to avoid mixing recordings")
+    cli.capture_dir.mkdir(parents=True, exist_ok=True)
 launcher = AppLauncher(cli)
 app = launcher.app
 
@@ -72,7 +84,7 @@ def set_camera(close=False):
         viewport.camera_path = "/root/Camera"
 
 
-set_camera()
+set_camera(cli.camera == "close")
 viewport = get_active_viewport()
 timeline = omni.timeline.get_timeline_interface()
 timeline.set_end_time(cfg.trajectory.total_duration_s + 1)
@@ -124,7 +136,51 @@ with window.frame:
         fps_label = ui.Label("FPS: measuring", height=25)
         ui.Label("Black rubber | illustrative material, not calibrated", height=25)
 
-if cli.auto_play or cli.smoke_frames:
+capture_frames = []
+
+
+def capture_frame():
+    """Finish rendering this physical state before advancing the solver again."""
+    set_camera(cli.camera == "close")
+    active = get_active_viewport()
+    if active is None:
+        raise RuntimeError("Viewport capture requires a displayed Kit viewport")
+    filename = f"frame_{len(capture_frames):05d}.png"
+    destination = cli.capture_dir / filename
+    request = capture_viewport_to_file(active, str(destination))
+    pending = asyncio.ensure_future(request.wait_for_result())
+    deadline = time.monotonic() + 30.0
+    while not pending.done() or not destination.exists():
+        if not app.is_running() or time.monotonic() > deadline:
+            pending.cancel()
+            raise RuntimeError(f"Viewport capture did not finish: {destination}")
+        app.update()
+    pending.result()
+    capture_frames.append(dict(file=filename, sim_time_s=sim.sim_time, phase=sim.last_sample.phase))
+    (cli.capture_dir / "capture.json").write_text(
+        json.dumps(
+            {
+                "newton": newton.__version__,
+                "warp": wp.__version__,
+                "physics_fps": cfg.simulation.fps,
+                "stride": cli.capture_stride,
+                "playback_fps": cfg.simulation.fps / cli.capture_stride,
+                "camera": cli.camera,
+                "completed": completed,
+                "validation_passed": validation_passed,
+                "frames": capture_frames,
+            },
+            indent=2,
+        )
+        + "\n"
+    )
+
+
+if cli.capture_dir:
+    for _ in range(20):
+        app.update()
+    capture_frame()
+if cli.auto_play or cli.smoke_frames or cli.capture_dir:
     timeline.play()
 print(
     "WEATHERSTRIP_GUI_READY: Isaac Lab AppLauncher; live Newton coupled physics; paused="
@@ -212,6 +268,8 @@ try:
                     simulated_seconds_per_wall_second=(1000 / means[3]) / cfg.simulation.fps,
                 )
                 fps_label.text = f"FPS: {perf_report['fps']:.1f} | Physics: {means[0]:.1f} ms | USD: {means[1]:.1f} ms"
+        if cli.capture_dir and advanced and (frames % cli.capture_stride == 0 or completed):
+            capture_frame()
         ticks += 1
         if control_path.exists():
             command = json.loads(control_path.read_text())
@@ -232,6 +290,8 @@ try:
             (REPO_ROOT / "results/gui_status.json").write_text(
                 json.dumps(
                     {
+                        "newton": newton.__version__,
+                        "warp": wp.__version__,
                         "sim_time_s": sim.sim_time,
                         "phase": sim.last_sample.phase,
                         "playing": timeline.is_playing(),
@@ -253,6 +313,7 @@ try:
             (REPO_ROOT / "results/gui_performance.json").write_text(
                 json.dumps(
                     {
+                        "capture_enabled": bool(cli.capture_dir),
                         "last_window": perf_report,
                         "sampled_frames": len(perf_frames),
                         "mean_ms": np.asarray(perf_frames).mean(axis=0).tolist(),
@@ -262,6 +323,10 @@ try:
                 + "\n"
             )
             perf_frames = []
+        if completed and cli.exit_after_cycle:
+            if not validation_passed:
+                raise RuntimeError("GUI cycle validation failed")
+            break
         if cli.smoke_frames and frames >= cli.smoke_frames:
             report = {
                 "isaaclab_app_launcher": True,
@@ -274,6 +339,8 @@ try:
             break
         if not timeline.is_playing():
             time.sleep(0.01)
+    if cli.capture_dir and not completed:
+        raise RuntimeError("GUI closed before the recording completed")
 except BaseException:
     import traceback
 
