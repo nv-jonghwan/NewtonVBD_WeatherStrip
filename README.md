@@ -1,108 +1,110 @@
 # Newton VBD WeatherStrip
 
-**Newton VBD와 MuJoCo Warp로 구현한 양팔 로봇의 차량 도어 웨더스트립 집기·인장·자유낙하 시뮬레이션**
+[English](README.md) | [한국어](README_KR.md)
 
-FANUC CRX-10iA/L 두 대와 Robotiq 2F-85 그리퍼가 테이블에 쌓인 웨더스트립 세 개 중 맨 위 하나를 집습니다. 들어 올려 양쪽으로 늘리고, 다시 느슨하게 늘어뜨린 다음 공중에서 그리퍼를 열어 아래 두 개 위로 떨어뜨립니다. 로봇 관절, 탄성 변형, 마찰 접촉, 중력 낙하를 계산하고 그 결과를 Isaac Lab GUI에 표시합니다.
+**Dual-arm robotic picking, stretching, and free fall of an automotive door weatherstrip with Newton VBD and MuJoCo Warp**
 
-![Newton 1.6으로 계산한 양팔 집기·인장·개방·자유낙하 전체 동작](docs/media/dual-arm-cycle.gif)
+Two FANUC CRX-10iA/L robots with Robotiq 2F-85 grippers pick the top of three weatherstrips stacked on a table. They lift and stretch it, bring their hands closer to let it sag, then open the grippers in midair so it falls onto the lower two seals. Robot joints, elastic deformation, frictional contact, and gravity-driven motion are simulated and displayed in the Isaac Lab GUI.
 
-*Newton 1.6.0 / Warp 1.17.0의 실제 Isaac Lab 뷰포트 기록입니다. 집기 → 들어 올리기 → 인장 → 복원 → 개방·자유낙하 → 적층 안정화를 반복 재생합니다. 60 Hz 물리 상태를 4프레임마다 캡처해 15 FPS로 재생하므로 물리 시간 기준 1배속이며, GUI 처리 속도를 뜻하지 않습니다.*
+![Complete dual-arm pick, stretch, release, and free-fall cycle computed with Newton 1.6](docs/media/dual-arm-cycle.gif)
 
-| 항목 | 구현 |
+*Actual Isaac Lab viewport recording with Newton 1.6.0 / Warp 1.17.0. The loop shows picking → lifting → stretching → relaxation → release and free fall → stack settling. Capturing every fourth 60 Hz physics frame and playing at 15 FPS reproduces simulation time at 1× speed; it does not indicate GUI throughput.*
+
+| Component | Implementation |
 | --- | --- |
-| 로봇 / EEF | FANUC CRX-10iA/L × 2 / Robotiq 2F-85 × 2 |
-| 탄성체 | 폐곡선 타원형 도어 씰 × 3, 개당 64개 로드 구간 |
-| 고무 계산 | Newton `SolverVBD`의 강체 로드·케이블 / AVBD 경로 |
-| 로봇 계산 | Newton `SolverMuJoCo` → MuJoCo Warp GPU 백엔드 |
-| 솔버 간 상호작용 | `SolverCoupledADMM`의 마찰 접촉 결합 |
-| 표시 | Isaac Lab `AppLauncher` + Kit 뷰포트 + USD 갱신 |
-| 검증 상태 | GPU 전체 동작, 장시간 안정화, GUI 반복 동작, USD 및 CPU 회귀 검증 |
+| Robots / end effectors | FANUC CRX-10iA/L × 2 / Robotiq 2F-85 × 2 |
+| Elastic objects | Three closed elliptical door seals, 64 rod segments each |
+| Rubber dynamics | Rigid rod/cable and AVBD path in Newton `SolverVBD` |
+| Robot dynamics | Newton `SolverMuJoCo` → MuJoCo Warp GPU backend |
+| Solver interaction | Frictional contact coupling through `SolverCoupledADMM` |
+| Visualization | Isaac Lab `AppLauncher` + Kit viewport + USD updates |
+| Validation | Full GPU cycle, extended settling, repeated GUI cycles, USD checks, and CPU regressions |
 
-> **제공 범위:** 설치·실행·검증 가능한 SimReady 참조 예제입니다. 실측 EPDM 물성으로 보정한 디지털 트윈이나 공식 SimReady 인증 자산은 아닙니다. Isaac Lab의 `DirectRLEnv` 학습 환경 또는 기본 `NewtonManager` 통합 환경도 아닙니다.
+> **Scope:** An installable, runnable, and testable SimReady reference example. It is not a digital twin calibrated to measured EPDM properties or an officially certified SimReady asset. It is also not an Isaac Lab `DirectRLEnv` training environment or a standard `NewtonManager` integration.
 
-## 목차
+## Contents
 
-- [1. 시나리오와 구현 범위](#1-시나리오와-구현-범위)
-- [2. 시스템 구조](#2-시스템-구조)
-- [3. 물리 모델과 솔버 이론](#3-물리-모델과-솔버-이론)
-- [4. SimReady 자산 제작 과정](#4-simready-자산-제작-과정)
-- [5. 개발 순서와 설계 판단](#5-개발-순서와-설계-판단)
-- [6. 설치](#6-설치)
-- [7. 실행](#7-실행)
-- [8. 설정과 튜닝](#8-설정과-튜닝)
-- [9. 검증과 성능](#9-검증과-성능)
-- [10. 저장소 구성](#10-저장소-구성)
-- [11. 문제 해결](#11-문제-해결)
-- [12. 확장과 모델의 한계](#12-확장과-모델의-한계)
-- [13. 참고 문헌과 라이선스](#13-참고-문헌과-라이선스)
+- [1. Scenario and scope](#1-scenario-and-scope)
+- [2. System architecture](#2-system-architecture)
+- [3. Physics model and solver theory](#3-physics-model-and-solver-theory)
+- [4. SimReady asset creation](#4-simready-asset-creation)
+- [5. Development sequence and design decisions](#5-development-sequence-and-design-decisions)
+- [6. Installation](#6-installation)
+- [7. Running the demo](#7-running-the-demo)
+- [8. Configuration and tuning](#8-configuration-and-tuning)
+- [9. Validation and performance](#9-validation-and-performance)
+- [10. Repository layout](#10-repository-layout)
+- [11. Troubleshooting](#11-troubleshooting)
+- [12. Extensions and model limitations](#12-extensions-and-model-limitations)
+- [13. References and licensing](#13-references-and-licensing)
 
-## 1. 시나리오와 구현 범위
+## 1. Scenario and scope
 
-기본 사이클의 물리 시간은 **13.05초**입니다. `Play`로 한 사이클을 실행하고, 완료 후에는 결과를 관찰할 수 있도록 일시정지합니다. `Reset`은 상태뿐 아니라 솔버의 내부 접촉·반복 계산 이력까지 다시 구성합니다.
+The default cycle lasts **13.05 seconds of simulation time**. `Play` runs one cycle and pauses at completion for inspection. `Reset` reconstructs both the state and the solvers' internal contact and iteration history.
 
-| 단계 | 시간 | 수행 내용 |
+| Phase | Duration | Behavior |
 | --- | ---: | --- |
-| 준비 / 접근 | 0.80 / 0.70 s | 세 고무가 중력과 접촉으로 자리 잡고, 양팔이 최상단 고무로 접근 |
-| 집기 | 1.00 s | Robotiq 주 관절을 닫아 양쪽 끝에 마찰 접촉 형성 |
-| 들어 올리기 | 2.00 s | 집었던 XY 위치를 유지하면서 상승 |
-| 늘리기 / 유지 | 1.20 / 0.50 s | 각 손을 바깥으로 80 mm 이동하고 인장 상태 유지 |
-| 복원 / 늘어뜨리기 | 1.00 / 0.80 s | 손 간격을 줄이고 25 mm 내려 고무가 다시 처지게 함 |
-| 개방 / 낙하 대기 | 0.45 / 1.00 s | 공중에서 그리퍼를 열고 고무가 중력으로 떨어지도록 대기 |
-| 후퇴 / 안정화 | 0.60 / 3.00 s | 그리퍼를 치우고 아래 두 고무 위에서 안정화 |
+| Prepare / approach | 0.80 / 0.70 s | Gravity and contact settle the three seals; both arms approach the top seal |
+| Grasp | 1.00 s | Close the Robotiq main joints to establish frictional contact at both ends |
+| Lift | 2.00 s | Move upward while preserving the grasped XY positions |
+| Stretch / hold | 1.20 / 0.50 s | Move each hand outward by 80 mm and hold the stretched shape |
+| Relax / sag | 1.00 / 0.80 s | Bring the hands closer and lower them by 25 mm to let the seal sag |
+| Open / wait for fall | 0.45 / 1.00 s | Open the grippers in midair and allow gravity-driven free fall |
+| Retreat / settle | 0.60 / 3.00 s | Move the grippers away and let the seal settle onto the lower two |
 
-- 세 고무 모두 동적 물체입니다. 아래 두 고무도 충돌과 하중에 반응합니다.
-- 고무와 그리퍼 사이에 임시 고정 관절, attachment, 좌표 덮어쓰기를 사용하지 않습니다.
-- 현재 집기 위치는 시뮬레이터가 제공하는 고무 구간 위치에서 추정합니다. 카메라 기반 인식이나 실제 센서 피드백은 포함하지 않습니다.
-- 궤적은 결정적인 단계별 계획이지만, 실제 변형·미끄러짐·낙하는 접촉 해석 결과입니다. 장비나 계산 순서에 따라 수치 결과에 작은 차이가 생길 수 있습니다.
+- All three seals are dynamic. The lower two also respond to collisions and loads.
+- No temporary fixed joints, attachments, or coordinate overrides connect the rubber to the grippers.
+- Grasp locations are estimated from segment positions provided by the simulator. Camera perception and real sensor feedback are not included.
+- The trajectory is a deterministic phase plan, while deformation, slipping, and falling result from contact dynamics. Hardware and computation order can produce small numerical differences.
 
-![그리퍼를 열어 떨어뜨린 후 아래 두 고무 위에 안착한 웨더스트립](docs/media/stack-after-release.png)
+![Weatherstrip resting on the lower two seals after gripper release and free fall](docs/media/stack-after-release.png)
 
-*동일 GUI 사이클의 낙하·안정화 결과. 고무를 정지 상태로 강제 고정하거나 수면 처리해서 만든 형상이 아닙니다.*
+*Release and settling from the same GUI cycle. The shape is not created by freezing the rubber or putting it to sleep.*
 
-## 2. 시스템 구조
+## 2. System architecture
 
 ```mermaid
 flowchart TD
-    A[기준 TOML 설정] --> B[로봇 USD와 고무 USD / 물성 프로파일]
-    B --> C[공유 Newton Model / State / Control]
-    T[단계별 양팔 궤적] --> IK[GPU 역기구학과 관절 목표]
+    A[Reference TOML configuration] --> B[Robot and rubber USD / material profiles]
+    B --> C[Shared Newton Model / State / Control]
+    T[Phased dual-arm trajectory] --> IK[GPU IK and joint targets]
     IK --> C
-    C --> M[MuJoCo Warp: 로봇과 Robotiq 관절]
-    C --> V[VBD / AVBD: 3개 탄성 로드와 적층 접촉]
-    M <--> K[ADMM: 솔버 간 마찰 접촉]
+    C --> M[MuJoCo Warp: robot and Robotiq joints]
+    C --> V[VBD / AVBD: three elastic rods and stack contact]
+    M <--> K[ADMM: frictional contact between solvers]
     K <--> V
-    M --> S[공유 상태 갱신]
+    M --> S[Shared state updates]
     V --> S
-    S --> R[GPU 곡면 보간 / USD 표시 갱신]
+    S --> R[GPU surface interpolation / USD display updates]
     R --> G[Isaac Lab AppLauncher / Kit GUI]
-    S --> Q[집기·자유낙하·안정화 검증 지표]
+    S --> Q[Grasp / free-fall / settling metrics]
 ```
 
-### 역할 분리
+### Division of responsibilities
 
-`simulation.py`는 로봇과 고무를 하나의 Newton 모델에 조립한 뒤, 소유할 body와 joint 목록을 각 솔버에 명시합니다.
+`simulation.py` assembles the robots and rubber into one Newton model and explicitly assigns body and joint ownership to each solver.
 
-- **MuJoCo Warp 소유:** 양팔과 그리퍼의 총 32개 body, 24개 관절 좌표, 10개 mimic 제약.
-- **VBD 소유:** 세 고무의 총 192개 로드 body와 192개 폐곡선 케이블 joint.
-- **ADMM 소유:** 서로 다른 솔버가 담당하는 물체 사이의 접촉 인터페이스.
-- **정적 환경:** 테이블과 바닥은 고정된 충돌 형상입니다.
+- **MuJoCo Warp:** 32 bodies, 24 joint coordinates, and 10 mimic constraints across both arms and grippers.
+- **VBD:** 192 rod bodies and 192 closed-loop cable joints across the three seals.
+- **ADMM:** The contact interface between objects owned by different solvers.
+- **Static environment:** The table and floor are fixed collision shapes.
 
-물리 상태를 계산한 뒤에만 렌더링 표면을 갱신합니다. 화면 표시가 고무의 물리 위치를 결정하지 않습니다. Kit의 표준 타임라인은 사용자 입력과 진행 시간 표시를 담당하며, 이 장면을 PhysX가 동시에 적분하지 않습니다.
+Render surfaces are updated only after computing the physical state. Visualization does not determine the rubber's physical positions. Kit's standard timeline handles user input and time display; PhysX does not simultaneously integrate this scene.
 
-기본값은 표시 프레임당 8개 물리 substep입니다.
+The default is eight physics substeps per display frame.
 
 $$
 \Delta t_{\mathrm{frame}}=\frac{1}{60}\;\mathrm{s},\qquad
 h=\frac{1}{60\times8}\approx2.083\;\mathrm{ms}
 $$
 
-각 substep에서 충돌 검출 → ADMM 결합 계산 → 관절 상태 갱신을 수행합니다. 기본 반복 수는 VBD 8회, ADMM 4회, MuJoCo CG 8회입니다. 이 값들은 서로 다른 반복 루프에 속하므로 하나의 통합 반복 횟수로 해석하면 안 됩니다.
+Each substep performs collision detection → ADMM coupling → joint-state updates. The defaults are eight VBD iterations, four ADMM iterations, and eight MuJoCo CG iterations. These belong to different iteration loops and should not be interpreted as one combined iteration count.
 
-## 3. 물리 모델과 솔버 이론
+## 3. Physics model and solver theory
 
-### 3.1 폐곡선 로드로 근사한 도어 웨더스트립
+### 3.1 Door weatherstrip approximated by a closed rod
 
-중심선의 초기 형상은 다음 타원입니다.
+The initial centerline is the following ellipse.
 
 $$
 \mathbf p_i=
@@ -112,25 +114,25 @@ a\cos\theta_i & b\sin\theta_i & z_0
 \theta_i=\frac{2\pi i}{N}
 $$
 
-기본값은 $a=0.28$ m, $b=0.22$ m, $N=64$입니다. 외경은 20 mm, 개당 질량은 0.40 kg입니다. `ModelBuilder.add_rod(..., closed=True)`로 각 구간의 강체 캡슐과 케이블 관절을 만들고 마지막 구간을 처음 구간에 연결합니다. 개별 캡슐은 강체지만, 연결부의 인장·전단·굽힘·비틀림 변형으로 전체 고무가 탄성체처럼 움직입니다.
+The defaults are $a=0.28$ m, $b=0.22$ m, and $N=64$, with a 20 mm outer diameter and a mass of 0.40 kg per seal. `ModelBuilder.add_rod(..., closed=True)` creates rigid capsules and cable joints for the segments and connects the last segment to the first. Each capsule is rigid, but stretch, shear, bending, and twist at the connections make the complete seal behave elastically.
 
-이는 중공 벌브와 립을 가진 실제 씰을 **원형 단면의 1차원 탄성 로드**로 축약한 모델입니다. 외형이 두꺼워 보여도 체적 FEM이나 단면 압축 해석을 수행하는 것은 아닙니다.
+This reduces a real seal with a hollow bulb and lips to a **one-dimensional elastic rod with a circular cross section**. Despite its thick appearance, the model does not perform volumetric FEM or cross-sectional compression analysis.
 
-| 모드 | 물리적 의미 | 기본 강성 | 기본 감쇠 |
+| Mode | Physical meaning | Default stiffness | Default damping |
 | --- | --- | ---: | ---: |
-| 인장 | 구간 사이 축 방향 길이 변화 | 5,000 N/m | 0.10 N·s/m |
-| 전단 | 중심선에 수직인 상대 변위 | 5,000 N/m | 0.10 N·s/m |
-| 굽힘 | 인접 구간 방향의 변화 | 1.20 N·m/rad | 0.024 N·m·s/rad |
-| 비틀림 | 로드 축 주위 상대 회전 | 0.40 N·m/rad | 0.008 N·m·s/rad |
+| Stretch | Axial length change between segments | 5,000 N/m | 0.10 N·s/m |
+| Shear | Relative displacement perpendicular to the centerline | 5,000 N/m | 0.10 N·s/m |
+| Bending | Change in orientation between adjacent segments | 1.20 N·m/rad | 0.024 N·m·s/rad |
+| Twist | Relative rotation around the rod axis | 0.40 N·m/rad | 0.008 N·m·s/rad |
 
-변위와 회전이 작은 경우를 설명하는 등가 관계는 다음과 같습니다. 실제 솔버는 구간의 3차원 위치와 회전을 함께 사용합니다.
+The following equivalent relations describe small displacements and rotations. The actual solver uses both three-dimensional segment positions and rotations.
 
 $$
 f_s\approx k_s\Delta\ell+c_s\Delta\dot\ell,\qquad
 \tau_b\approx k_b\Delta\theta+c_b\Delta\dot\theta
 $$
 
-USD 물성 작성 시 평균 구간 길이 $\bar\ell$과 원형 단면의 기하량을 사용해 등가 계수로 변환합니다.
+When authoring USD material properties, the average segment length $\bar\ell$ and circular cross-section geometry are used to obtain equivalent coefficients.
 
 $$
 A=\pi r^2,\qquad I=\frac{\pi r^4}{4},\qquad J=\frac{\pi r^4}{2}
@@ -143,13 +145,13 @@ E_b\approx\frac{k_b\bar\ell}{I},\quad
 G_t\approx\frac{k_t\bar\ell}{J}
 $$
 
-여기서 $E_s,E_b,G_s,G_t$는 독립적으로 조정된 **등가 계수**입니다. 실제 균질 등방성 고무의 단일 Young 계수와 Poisson 비를 식별한 값이 아닙니다. 런타임은 TOML/JSON에 기록한 구간 강성을 사용합니다. 구간 수나 단면을 바꿀 때에는 기존 강성을 그대로 복사하지 말고 길이·단면 스케일과 동작 검증을 다시 확인해야 합니다.
+Here $E_s,E_b,G_s,G_t$ are independently tuned **equivalent coefficients**, not an identified Young's modulus and Poisson's ratio for homogeneous isotropic rubber. The runtime uses the segment stiffnesses stored in TOML/JSON. If the segment count or cross section changes, revisit length and cross-section scaling and revalidate the behavior instead of copying the old stiffnesses unchanged.
 
-질량은 원통 구간 체적 합으로 맞춥니다. 캡슐 충돌 형상의 반구 끝부분을 중복 질량으로 더하지 않습니다. 따라서 계산에 사용되는 등가 밀도를 실측 EPDM 재료 밀도로 해석해서는 안 됩니다.
+Mass is matched using the sum of cylindrical segment volumes. The hemispherical ends of collision capsules do not add overlapping mass. The resulting equivalent density should therefore not be interpreted as measured EPDM density.
 
-### 3.2 VBD와 AVBD
+### 3.2 VBD and AVBD
 
-VBD(Vertex Block Descent)는 암시적 시간 적분의 변분 문제를 작은 블록의 반복 최적화로 푸는 방법입니다. 입자 위치 $\mathbf x$에 대한 대표적인 설명식은 다음과 같습니다.
+VBD (Vertex Block Descent) solves the variational problem of implicit time integration through iterative optimization of small blocks. A representative formulation for particle positions $\mathbf x$ is:
 
 $$
 \mathbf x^{n+1}=\arg\min_{\mathbf x}
@@ -159,46 +161,46 @@ $$
 \right]
 $$
 
-$\mathbf y$는 관성 예측 위치이고, $E$는 탄성·접촉 등의 에너지입니다. 전체 자유도를 한꺼번에 푸는 대신, 나머지 블록을 고정한 상태에서 각 블록의 기울기와 국소 Hessian을 이용해 에너지를 줄입니다. 서로 직접 연결되지 않은 블록을 graph coloring으로 묶으면 같은 색의 블록을 GPU에서 병렬 계산할 수 있습니다. [VBD 원 논문](https://graphics.cs.utah.edu/research/projects/vbd/)
+$\mathbf y$ is the inertial prediction and $E$ contains elastic, contact, and other energies. Instead of solving all degrees of freedom at once, each block reduces energy using its gradient and local Hessian while the other blocks stay fixed. Graph coloring groups blocks that are not directly connected so that blocks of the same color can be processed in parallel on the GPU. [Original VBD paper](https://graphics.cs.utah.edu/research/projects/vbd/)
 
-이 프로젝트의 고무는 입자 체적 메시가 아니라 강체 로드이므로, Newton `SolverVBD` 안의 **강체 AVBD(Augmented VBD) 경로**를 사용합니다. 로드 블록에는 병진뿐 아니라 회전도 포함됩니다. AVBD는 augmented Lagrangian 상태를 이용해 강한 접촉·관절 제약을 다룹니다. 개념적으로 제약 $C$에 대해 다음 항을 추가합니다.
+The rubber in this project consists of rigid rods rather than a volumetric particle mesh, so it uses the **rigid AVBD (Augmented VBD) path** inside Newton `SolverVBD`. Rod blocks include rotation as well as translation. AVBD uses augmented Lagrangian state to handle stiff contact and joint constraints. Conceptually, a constraint $C$ adds the following terms:
 
 $$
 \mathcal L_{\mathrm{aug}}=E+\lambda^{\mathsf T}C+\frac{\rho_c}{2}\lVert C\rVert^2
 $$
 
-기본 구현에서 케이블의 인장·전단·굽힘·비틀림은 유한 강성을 가진 soft 모드이며, 강체 접촉은 hard 모드를 사용합니다. `builder.color()`가 필수이고, 감쇠 계수 `kd`는 절대 물리 단위로 해석합니다. [Newton SolverVBD API](https://newton-physics.github.io/newton/1.6.0/api/_generated/newton.solvers.SolverVBD.html), [AVBD 원 논문](https://graphics.cs.utah.edu/research/projects/avbd/)
+In the default implementation, cable stretch, shear, bending, and twist use soft modes with finite stiffness, while rigid contact uses hard mode. `builder.color()` is required, and damping coefficients `kd` are interpreted in absolute physical units. [Newton SolverVBD API](https://newton-physics.github.io/newton/1.6.0/api/_generated/newton.solvers.SolverVBD.html), [original AVBD paper](https://graphics.cs.utah.edu/research/projects/avbd/)
 
-VBD 논문의 안정성 논의를 곧바로 이 전체 장면의 무조건적인 성공 보장으로 확대하면 안 됩니다. 본 장면은 유한 반복, 접촉 검출, 관절 구동, 서로 다른 솔버의 결합을 포함합니다. 반복 수를 너무 줄이거나 접촉 강성을 과도하게 높이면 미끄러짐·잔진동·제약 오차가 발생할 수 있습니다.
+The stability discussion in the VBD paper does not imply unconditional success for this entire scene. The scene includes finite iterations, collision detection, joint drives, and coupling between different solvers. Too few iterations or excessive contact stiffness can produce slipping, residual oscillation, and constraint errors.
 
-### 3.3 MuJoCo Warp로 계산하는 로봇과 그리퍼
+### 3.3 Robot and gripper dynamics with MuJoCo Warp
 
-MJWarp는 MuJoCo의 동역학 계산을 NVIDIA GPU에서 수행하는 백엔드입니다. 여기서는 Newton의 `SolverMuJoCo`가 모델과 상태 변환을 담당합니다. 관절계의 관계를 개념적으로 쓰면 다음과 같습니다.
+MJWarp runs MuJoCo dynamics on NVIDIA GPUs. Newton's `SolverMuJoCo` handles model and state conversion here. The articulated system can be expressed conceptually as:
 
 $$
 M(q)\ddot q+h(q,\dot q)=\tau_{\mathrm{drive}}+J(q)^{\mathsf T}\lambda+\tau_{\mathrm{ext}}
 $$
 
-역기구학은 원하는 양손 위치·방향에 대한 관절 목표를 만들고, 실제 관절은 구동력과 제약을 통해 그 목표를 추종합니다. 따라서 IK가 고무를 직접 움직이는 구조가 아닙니다.
+Inverse kinematics generates joint targets for the desired hand positions and orientations; the physical joints follow those targets through drives and constraints. IK does not directly move the rubber.
 
-| 설정 | 값 / 역할 |
+| Setting | Value / role |
 | --- | --- |
-| 백엔드 | MuJoCo Warp, `use_mujoco_cpu=False` 기본 경로 |
-| 관절 제약 해법 / 적분 | `cg` / `implicitfast` |
-| MuJoCo 반복 / line search | 8 / 4 |
-| native 접촉 검출 | `use_mujoco_contacts=False` |
-| Robotiq 개방 / 닫힘 목표 | 0 / 0.78 rad |
-| 주 관절 구동 강성 / 감쇠 | 180 N·m/rad / 8 N·m·s/rad |
-| 주 관절 토크 한도 | 26 N·m |
-| mimic 제약 | 그리퍼당 5개, 양쪽 합계 10개 |
+| Backend | MuJoCo Warp, default `use_mujoco_cpu=False` path |
+| Joint constraint solver / integrator | `cg` / `implicitfast` |
+| MuJoCo iterations / line search | 8 / 4 |
+| Native contact detection | `use_mujoco_contacts=False` |
+| Robotiq open / closed targets | 0 / 0.78 rad |
+| Main-joint drive stiffness / damping | 180 N·m/rad / 8 N·m·s/rad |
+| Main-joint torque limit | 26 N·m |
+| Mimic constraints | Five per gripper, ten total |
 
-Robotiq의 주 관절 하나를 구동하면 mimic equality가 나머지 손가락 관절을 연동합니다. 이 예제는 접촉 하중 아래에서 수동 관절이 과도하게 벌어지지 않도록 `eq_solref=[0.004,1.0]`, `eq_solimp=[0.99,0.99,0.001,0.5,2.0]`를 설정합니다. 이는 예제의 솔버 튜닝값이며 제조사 제어기 사양을 재현한 값은 아닙니다.
+Driving one Robotiq main joint moves the other finger joints through mimic equalities. The example sets `eq_solref=[0.004,1.0]` and `eq_solimp=[0.99,0.99,0.001,0.5,2.0]` to prevent excessive opening of passive joints under contact loads. These are solver tuning values for the example, not a reproduction of the manufacturer's controller specifications.
 
-`use_mujoco_contacts=False`는 모든 접촉을 끈다는 의미가 아닙니다. Newton/결합 솔버가 관리하는 접촉 경로를 사용한다는 뜻입니다. 특히 고무–그리퍼의 교차 솔버 접촉은 다음 ADMM 인터페이스가 담당합니다. [Newton MuJoCo 문서](https://newton-physics.github.io/newton/1.6.0/solvers/mujoco.html), [MuJoCo Warp](https://github.com/google-deepmind/mujoco_warp)
+`use_mujoco_contacts=False` does not disable all contact. It selects the contact path managed by Newton and the coupled solver. In particular, rubber–gripper contact across solvers is handled by the following ADMM interface. [Newton MuJoCo documentation](https://newton-physics.github.io/newton/1.6.0/solvers/mujoco.html), [MuJoCo Warp](https://github.com/google-deepmind/mujoco_warp)
 
-### 3.4 ADMM으로 두 솔버 결합하기
+### 3.4 Coupling two solvers with ADMM
 
-ADMM(Alternating Direction Method of Multipliers)은 결합된 문제를 부분 문제로 나누어 각 부분과 인터페이스 변수를 번갈아 갱신하는 방법입니다. 일반적인 두 블록 문제를 설명하면 다음과 같습니다.
+ADMM (Alternating Direction Method of Multipliers) splits a coupled problem into subproblems and alternately updates each part and its interface variables. A generic two-block problem is:
 
 $$
 \min_{x,z}\; f(x)+g(z)\quad\text{subject to}\quad Ax+Bz=c
@@ -212,9 +214,9 @@ u^{k+1}&=u^k+Ax^{k+1}+Bz^{k+1}-c
 \end{aligned}
 $$
 
-위 식은 알고리즘의 분할 원리를 설명하기 위한 것입니다. Newton의 실제 강체 접촉 구현이 위치 벡터에 이 식을 그대로 적용하는 것은 아닙니다. `ModelView`, 솔버별 상태, 힘 주입, 유효 질량과 proximal 항, 접촉 행 및 dual 변수를 함께 사용합니다. [ADMM 참고 문헌](https://stanford.edu/~boyd/papers/admm_distr_stats.html)
+These equations explain the splitting principle. Newton's rigid-contact implementation does not apply them directly to position vectors in this form. It uses `ModelView`, per-solver states, force injection, effective mass and proximal terms, contact rows, and dual variables. [ADMM reference](https://stanford.edu/~boyd/papers/admm_distr_stats.html)
 
-본 코드의 설정은 다음과 같습니다.
+The configuration used here is:
 
 ```python
 SolverCoupledADMM.Config(
@@ -230,54 +232,54 @@ SolverCoupledADMM.Config(
 )
 ```
 
-ADMM은 소유권이 다른 물체의 접촉 행을 내부 검출 경로에서 구성하고, 마찰 접촉에서 최대 소산을 따르는 Coulomb 투영을 사용합니다. VBD가 계산하는 고무끼리의 접촉과 이 교차 접촉을 구분해야 합니다. `rho`는 인터페이스의 수치적 penalty이며 고무의 Young 계수나 N/m 단위의 접촉 스프링 강성과 동일한 값이 아닙니다. 고정된 반복 예산을 사용하므로 매 substep의 완전 수렴을 주장하지 않습니다. [Newton 결합 솔버 문서](https://newton-physics.github.io/newton/1.6.0/concepts/coupling.html)
+ADMM constructs contact rows between objects with different ownership through its internal detection path and uses a maximum-dissipation Coulomb projection for frictional contact. This cross-solver contact is distinct from rubber–rubber contact solved by VBD. `rho` is a numerical interface penalty, not the rubber's Young's modulus or a contact spring stiffness in N/m. A fixed iteration budget is used; full convergence at every substep is not claimed. [Newton coupled solver documentation](https://newton-physics.github.io/newton/1.6.0/concepts/coupling.html)
 
-### 3.5 적층 안정화와 접촉 계수
+### 3.5 Stack settling and contact coefficients
 
-초기 적층 간격은 25 mm입니다. 아래 고무 두 개는 각각 +30°, −30°로 회전해 원형 단면끼리의 지지점을 만들고, 맨 위 고무는 0°로 놓습니다. 인접한 같은 고무 구간의 중복 자기충돌만 제외하고, 떨어진 구간과 서로 다른 고무 사이의 충돌은 유지합니다.
+The initial stacking pitch is 25 mm. The lower two seals are rotated by +30° and −30° to form support points between their circular sections; the top seal is placed at 0°. Only redundant self-collisions between neighboring segments of the same seal are excluded. Distant segments and different seals still collide.
 
-최종 설정에서는 **고무–고무 및 고무–테이블의 VBD 접촉 강성을 50,000에서 5,000 N/m로 낮춰** 접촉부의 수치적 떨림을 줄였습니다. 굽힘 강성은 1.20 N·m/rad로 유지하여 전체 타원이 지나치게 흐물거리지 않게 했습니다. 즉, 중심선의 형상 복원과 접촉부의 응답을 별도로 조정했습니다.
+The final configuration **reduces VBD rubber–rubber and rubber–table contact stiffness from 50,000 to 5,000 N/m** to reduce numerical contact jitter. Bending stiffness remains 1.20 N·m/rad so the overall ellipse does not become excessively floppy. Centerline shape recovery and contact response are tuned separately.
 
-- VBD 접촉 감쇠: 10 N·s/m.
-- 고무 형상 마찰 계수: 2.0, 테이블 형상 마찰 계수: 0.15.
-- VBD는 강성·감쇠를 산술 평균, 마찰을 기하 평균으로 혼합합니다. 따라서 고무–테이블의 VBD 혼합 마찰은 $\sqrt{2.0\times0.15}\approx0.548$입니다.
-- 충돌 margin은 1 mm, gap은 2 mm입니다. 표시 표면과 접촉 경계가 정확히 같은 위치인 모델은 아닙니다.
-- `gripper_contact_*`는 형상 재질에 작성하는 **명목상 접촉쌍 계수**입니다. 이를 ADMM 교차 접촉의 유효 강성으로 읽으면 안 됩니다. 실제 그립은 ADMM 설정, 구동, mimic 제약, 마찰, 집기 위치까지 함께 영향을 받습니다.
+- VBD contact damping: 10 N·s/m.
+- Rubber shape friction: 2.0; table shape friction: 0.15.
+- VBD mixes stiffness and damping arithmetically and friction geometrically. The mixed rubber–table VBD friction is therefore $\sqrt{2.0\times0.15}\approx0.548$.
+- Collision margin is 1 mm and gap is 2 mm. The rendered surface and contact boundary do not coincide exactly.
+- `gripper_contact_*` values are **nominal contact-pair coefficients** authored on shape materials. They should not be read as effective ADMM cross-contact stiffness. Grasping also depends on ADMM settings, drives, mimic constraints, friction, and grasp position.
 
-잔진동을 줄이기 위해 고무 속도를 강제로 0으로 만들거나 정지 body로 바꾸지 않습니다. 렌더링 표면에도 시간적 흔들림 제거 필터를 적용하지 않습니다.
+Residual oscillation is not suppressed by forcibly zeroing rubber velocities or making bodies static. No temporal jitter filter is applied to the render surfaces either.
 
-### 3.6 물리 해상도와 시각 해상도 분리
+### 3.6 Separate physical and visual resolution
 
-물리 계산은 개당 64개 로드 구간을 사용합니다. 표시는 실제 구간 중심을 따라 주기적인 Catmull–Rom 곡선을 만들고, 256개 단면 × 16개 원주 점으로 표면을 구성합니다. 개당 4,096개 정점입니다.
+Physics uses 64 rod segments per seal. Visualization constructs a periodic Catmull–Rom curve through the actual segment centers, then builds a surface with 256 cross sections and 16 points around each section: 4,096 vertices per seal.
 
-GPU에서 보간과 단면 프레임·법선을 계산하고, 세 고무의 결과를 한 번에 CPU로 가져와 USD를 갱신합니다. 단면 프레임은 평행 이동 방식으로 이어 급격한 법선 뒤집힘을 줄입니다. 이 방법은 그리퍼 주변이 연결된 사슬처럼 보이는 문제를 줄이면서 물리 로드 수를 늘리지 않습니다. 표시 표면은 충돌 메시가 아닙니다.
+Interpolation, cross-section frames, and normals are computed on the GPU. Results for all three seals are transferred to the CPU together for USD updates. Parallel transport propagates the section frames to reduce abrupt normal flips. This reduces the chain-like appearance near the grippers without increasing the physical rod count. The display surface is not the collision mesh.
 
-## 4. SimReady 자산 제작 과정
+## 4. SimReady asset creation
 
-이 예제에서 SimReady 자산은 단순히 보기 좋은 USD 하나가 아니라, **형상·단위·물성·충돌·좌표계·출처·런타임 계약·검증 결과**를 함께 갖춘 묶음입니다.
+In this example, a SimReady asset is a package containing **geometry, units, material properties, collision definitions, coordinate conventions, provenance, a runtime contract, and validation results**, rather than just a visually appealing USD file.
 
-| 순서 | 작업 | 이 저장소의 산출물 / 통과 기준 |
+| Step | Task | Output / acceptance criteria in this repository |
 | --- | --- | --- |
-| 1 | 요구 동작과 허용 근사 정의 | 3개 적층, 최상단 집기, 탄성 인장, 공중 개방, 자연 낙하 |
-| 2 | 원본 자산과 버전 고정 | `assets/manifest.json`; 공식 URL, commit, 파일별 SHA-256 |
-| 3 | 좌표계·단위 정리 | SI 단위, Z-up, 유효한 default prim, 로봇 flange와 그립 좌표 정렬 |
-| 4 | 물리용 중심선과 위상 작성 | 타원형 periodic curve, 중복 끝점 처리, 폐곡선 64개 joint |
-| 5 | 단면·질량·물성 작성 | 반경, 총질량, 인장·전단·굽힘·비틀림 강성 및 감쇠 |
-| 6 | 충돌 정책 작성 | 캡슐 반경, margin/gap, 같은 씰의 이웃 구간 제외, 씰 간 충돌 유지 |
-| 7 | 표시 자산 작성 | 검은 고무 재질, 연속 표면·법선, grasp site 메타데이터 |
-| 8 | 독립 import 검증 | 질량, 폐곡선 연결, 좌표계, 정상 법선, 누락된 USD 의존성 검사 |
-| 9 | 상호작용 검증 | 실제 접촉 집기, 두 하단 씰 비상승, 자유낙하와 착지·안정화 |
-| 10 | 배포 패키징 | 재현 가능한 설치·다운로드, 버전 고정, 자동 검증, 실행 문서 |
+| 1 | Define the required behavior and allowed approximations | Three-seal stack, top-only grasp, elastic stretch, midair release, natural fall |
+| 2 | Pin source assets and versions | `assets/manifest.json`: official URLs, commits, per-file SHA-256 |
+| 3 | Normalize coordinates and units | SI units, Z-up, valid default prim, aligned robot flange and grasp frames |
+| 4 | Author the physical centerline and topology | Elliptical periodic curve, duplicate endpoint handling, 64 closed-loop joints |
+| 5 | Author cross section, mass, and material | Radius, total mass, stretch/shear/bend/twist stiffness and damping |
+| 6 | Define collision policy | Capsule radius, margin/gap, same-seal neighbor exclusions, inter-seal collisions |
+| 7 | Build visual assets | Black rubber material, continuous surfaces and normals, grasp-site metadata |
+| 8 | Validate standalone import | Mass, loop closure, coordinates, valid normals, missing USD dependencies |
+| 9 | Validate interaction | Contact-based grasp, lower seals staying down, free fall, landing, and settling |
+| 10 | Package for distribution | Reproducible installation and downloads, pinned versions, automated checks, run documentation |
 
-### 자산 묶음
+### Asset package
 
 ```text
 assets/weatherstrip/
-├── weatherstrip.usda    # 재사용 가능한 단일 웨더스트립
-└── runtime.json         # 정확한 구간 강성·감쇠·질량과 런타임 가정
+├── weatherstrip.usda    # Reusable single weatherstrip
+└── runtime.json         # Exact segment stiffness, damping, mass, and runtime assumptions
 ```
 
-USD의 주요 prim은 다음과 같습니다.
+The main USD prims are:
 
 ```text
 /Weatherstrip
@@ -289,50 +291,50 @@ USD의 주요 prim은 다음과 같습니다.
 └── GraspSites/{Left,Right}
 ```
 
-`PhysicsCurvesDeformableSimAPI`와 관련 curve material 속성은 고정한 Newton 버전이 읽는 제안 스키마입니다. 모든 USD 소비자가 이 고무를 자동으로 같은 물리 모델로 실행한다는 뜻은 아닙니다. 단일 자산의 standalone importer 검증과, `runtime.json`의 구간 계수를 사용해 세 개를 조립하는 본 런타임의 동작 검증을 구분합니다.
+`PhysicsCurvesDeformableSimAPI` and the associated curve material properties are proposal schemas understood by the pinned Newton version. They do not imply that every USD consumer will run the same rubber physics automatically. Standalone import validation for one asset is distinct from runtime validation of three seals assembled using the segment coefficients in `runtime.json`.
 
-`load_weatherstrip_points()`는 USD에서 중심선을 읽고 현재 설정과 `runtime.json`의 물성 일치를 확인합니다. 물성을 수정한 뒤 자산을 재생성하지 않으면 실행을 중단합니다. 오래된 USD와 새로운 물리 설정이 섞이는 것을 방지하기 위한 계약입니다.
+`load_weatherstrip_points()` reads the centerline from USD and checks that the current configuration matches the material profile in `runtime.json`. Execution stops if material settings change without rebuilding the asset. This contract prevents stale USD assets from being mixed with new physics settings.
 
-## 5. 개발 순서와 설계 판단
+## 5. Development sequence and design decisions
 
-새로운 변형체 조작 예제를 개발할 때에는 다음 순서로 문제를 분리하는 것이 좋습니다.
+When developing a new deformable manipulation example, separate the problems in the following order.
 
-1. **단일 자산 검증:** 로봇을 붙이기 전에 좌표계, 질량, 폐곡선 연결, 자기충돌 제외와 낙하를 확인합니다.
-2. **로봇·EEF 조립 검증:** flange 방향과 길이, EEF 원점, 관절 수, mimic 수, 개방/닫힘 한도를 확인합니다. 이 예제의 J6 장착 변환은 +X 160 mm와 Y축 90° 회전입니다.
-3. **접촉 집기 검증:** 고무를 붙잡는 attachment 없이 양쪽 손가락 접촉을 확인합니다. 실제 mesh의 닫힌 패드 범위를 조사한 후 집기 깊이를 17 mm로 설정했습니다. 패드 끝에 걸치면 작은 수치 차이에도 미끄러질 수 있습니다.
-4. **단일 고무 인장 검증:** 집기 위치에서 순수 수직 상승한 뒤 양쪽으로 늘립니다. 상승 단계에 불필요한 XY 이동이 섞이면 집기가 풀릴 수 있습니다.
-5. **적층으로 확장:** 아래 두 고무의 운동과 접촉을 유지하며 최상단만 집히는지 확인합니다. 최고 높이 하나만 보는 대신 하단 고무의 질량 중심 상승도 검사합니다.
-6. **개방·자유낙하 검증:** 공중 개방 후 그리퍼·테이블·하단 고무와 접촉하지 않는 구간이 실제로 존재하는지 확인하고, 이후 하단 고무와 착지 접촉이 생기는지 추적합니다.
-7. **안정화 조정:** 복원 강성, 재료 감쇠, 접촉 강성, 시간 간격과 반복 수를 구분합니다. 감쇠만 과도하게 높이면 집기와 복원 동작 자체가 달라질 수 있습니다.
-8. **표시 품질 개선:** 물리 상태와 분리된 곡면 보간을 적용하고 폐곡선 연결·반경·법선을 테스트합니다.
-9. **성능 개선:** 실제 측정으로 CUDA 실행, CPU 전송, USD 쓰기, Kit 표시 비용을 나눕니다. 버퍼와 반복 수를 줄인 뒤에는 반드시 전체 사이클을 재검증합니다.
-10. **배포 검증:** 깨끗한 Python 환경, 공식 자산 재다운로드, 저장소 밖에서의 실행, 실제 GUI와 기록 USD를 확인합니다.
+1. **Validate the standalone asset:** Check coordinates, mass, loop closure, self-collision exclusions, and falling before adding robots.
+2. **Validate robot and end-effector assembly:** Check flange orientation and length, end-effector origin, joint and mimic counts, and opening/closing limits. This example mounts at J6 with a +X translation of 160 mm and a 90° rotation around Y.
+3. **Validate contact-based grasping:** Confirm contact at both fingers without an attachment. Grasp depth is 17 mm, selected after inspecting the closed pad region of the actual mesh. Catching a pad edge can slip under small numerical changes.
+4. **Validate single-seal stretching:** Lift vertically from the grasp location before stretching outward. Unnecessary XY motion during lift can break the grasp.
+5. **Extend to a stack:** Verify top-only grasping while preserving motion and contact of the lower two seals. Check lower-seal centroid lift, not just the highest point reached.
+6. **Validate release and free fall:** Confirm an airborne interval with no gripper, table, or lower-seal contact, then track subsequent landing contact with the lower seals.
+7. **Tune settling:** Distinguish restoring stiffness, material damping, contact stiffness, time step, and iteration count. Excessive damping alone can alter grasping and recovery.
+8. **Improve visual quality:** Interpolate surfaces separately from physics and test closure, radius, and normals.
+9. **Improve performance:** Measure CUDA execution, CPU transfers, USD writes, and Kit display costs separately. Revalidate the full cycle after reducing buffers or iterations.
+10. **Validate distribution:** Check a clean Python environment, fresh official asset downloads, execution from outside the repository, the actual GUI, and recorded USD.
 
-현재 프로젝트는 3개 적층 시나리오를 검증 대상으로 고정합니다. 단순히 `stack_count`만 늘려 여러 개의 씰로 일반화하는 인터페이스는 제공하지 않습니다.
+Validation currently targets exactly three stacked seals. Simply increasing `stack_count` is not a supported interface for generalizing to an arbitrary number of seals.
 
-## 6. 설치
+## 6. Installation
 
-### 6.1 검증 환경과 요구 조건
+### 6.1 Validated environment and requirements
 
-| 항목 | 검증한 구성 |
+| Component | Validated configuration |
 | --- | --- |
 | OS | Ubuntu 24.04.4 LTS, Linux x86-64 |
 | Python | 3.12 |
-| GPU / 드라이버 | NVIDIA RTX 6000 Ada 48 GB / 595.91.07 |
+| GPU / driver | NVIDIA RTX 6000 Ada 48 GB / 595.91.07 |
 | Newton | 1.6.0, upstream tag `v1.6.0` |
 | Warp | 1.17.0 |
-| MuJoCo / MuJoCo Warp | 각각 3.12.0 |
+| MuJoCo / MuJoCo Warp | 3.12.0 each |
 | NumPy / OpenUSD | 2.3.1 / `usd-core` 25.11 |
 | Isaac Sim | 6.0.1.0 |
-| Isaac Lab 소스 | commit `2e44ddb2e19536579140496023b5ccb060bc4152` |
-| 해당 Isaac Lab Python 메타데이터 버전 | 6.1.17 |
-| GUI 환경의 PyTorch | 2.11.0+cu128 |
+| Isaac Lab source | Commit `2e44ddb2e19536579140496023b5ccb060bc4152` |
+| Python metadata version of that Isaac Lab source | 6.1.17 |
+| PyTorch in the GUI environment | 2.11.0+cu128 |
 
-NVIDIA CUDA GPU와 호환 드라이버가 필요합니다. Isaac Lab GUI에는 Vulkan/RTX 표시가 가능한 GPU와 정상적인 데스크톱 세션이 필요합니다. 위 표는 최소 사양이 아니라 실제 검증 환경이며, 다른 GPU에서 동일 FPS를 보장하지 않습니다. Windows·ARM 환경은 이 저장소에서 검증하지 않았습니다.
+An NVIDIA CUDA GPU and compatible driver are required. The Isaac Lab GUI additionally needs Vulkan/RTX graphics support and a working desktop session. The table describes the tested environment, not minimum requirements, and does not guarantee identical FPS on other GPUs. Windows and ARM have not been validated in this repository.
 
-**계산 전용 환경과 GUI 환경을 나누어 설치하는 것을 권장합니다.** GUI를 보지 않는 물리 검증에는 Isaac Sim, Isaac Lab, PyTorch가 필요하지 않습니다.
+**Install compute-only and GUI dependencies in separate environments.** Physics validation without visualization does not require Isaac Sim, Isaac Lab, or PyTorch.
 
-### 6.2 계산 전용 설치 — 새 환경에서 검증한 경로
+### 6.2 Compute-only installation — validated in a fresh environment
 
 ```bash
 git clone git@github.com:nv-jonghwan/NewtonVBD_WeatherStrip.git
@@ -343,29 +345,29 @@ source .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -c requirements/compute-constraints.txt -e .
 
-# 공식 자산 15개 파일 다운로드 + SHA-256 검증
+# Download 15 official asset files and verify SHA-256
 python scripts/fetch_assets.py
 
-# 웨더스트립 생성 및 USD 물리 import 검증
+# Build the weatherstrip and validate USD physics import
 ./scripts/python.sh scripts/build_asset.py
 ./scripts/python.sh scripts/validate_asset.py
 ./scripts/python.sh -m newton_weatherstrip.doctor --runtime --import-smoke
 
-# GPU에서 전체 시나리오 계산, JSON과 USD 저장
+# Run the full GPU scenario and save JSON and USD
 ./scripts/run_headless.sh
 ```
 
-GitHub SSH 키를 사용하지 않는 환경은 clone URL을 `https://github.com/nv-jonghwan/NewtonVBD_WeatherStrip.git`로 바꿀 수 있습니다.
+If GitHub SSH keys are unavailable, use `https://github.com/nv-jonghwan/NewtonVBD_WeatherStrip.git` as the clone URL.
 
-`fetch_assets.py`는 버전과 체크섬이 고정된 FANUC·Robotiq 파일만 받습니다. 이미 있는 파일의 체크섬이 다르면 덮어쓰지 않고 오류를 냅니다. 네트워크 없이 기존 파일을 검사하려면 다음을 사용합니다.
+`fetch_assets.py` downloads only the pinned FANUC and Robotiq files. If an existing file has the wrong checksum, it reports an error instead of overwriting it. To verify existing files without network access:
 
 ```bash
 python scripts/fetch_assets.py --offline
 ```
 
-### 6.3 Isaac Lab GUI 환경
+### 6.3 Isaac Lab GUI environment
 
-**기존에 동작하는 Isaac Sim 6.0.1 환경이 있으면 그 Python을 사용하십시오.** 새 GUI 환경을 만드는 경우의 구성 명령은 다음과 같습니다. Isaac Sim 다운로드는 계산 전용 환경보다 훨씬 크며, NVIDIA 배포 서버 접근이 필요합니다.
+**If you already have a working Isaac Sim 6.0.1 environment, use its Python interpreter.** The following commands describe creating a new GUI environment. Isaac Sim downloads are much larger than the compute-only dependencies and require access to NVIDIA's distribution servers.
 
 ```bash
 python3.12 -m venv .venv-gui
@@ -379,7 +381,7 @@ python -m pip install "torch==2.11.0" \
 python -m pip install toml==0.10.2 packaging==26.0
 python -m pip install -e .
 
-# AppLauncher와 Kit 앱 설정을 사용하는 고정 소스 체크아웃
+# Pinned source checkout for AppLauncher and Kit app settings
 git clone https://github.com/isaac-sim/IsaacLab.git .cache/IsaacLab
 git -C .cache/IsaacLab checkout 2e44ddb2e19536579140496023b5ccb060bc4152
 
@@ -388,57 +390,57 @@ export WEATHERSTRIP_ISAACLAB="$PWD/.cache/IsaacLab"
 ./scripts/run_isaaclab.sh
 ```
 
-이 예제는 `AppLauncher`만 사용하고 학습 환경의 전체 설치 집합을 요구하지 않습니다. 실행 래퍼가 `WEATHERSTRIP_ISAACLAB/source/*`를 Python 경로에 추가합니다. 해당 Isaac Lab commit의 전체 `setup.py`에는 Warp 1.13.0 의존성이 있으므로, 이를 무조건 함께 설치하면 본 예제의 Newton 1.6 / Warp 1.17 조합과 충돌합니다. 학습용 Isaac Lab 환경에 통합할 때에는 별도 호환성 검증이 필요합니다.
+This example only uses `AppLauncher`; the complete training dependency set is not required. The wrapper adds `WEATHERSTRIP_ISAACLAB/source/*` to Python's search path. The full `setup.py` at the pinned Isaac Lab commit depends on Warp 1.13.0, which conflicts with this example's Newton 1.6 / Warp 1.17 combination if installed indiscriminately. Integration into an Isaac Lab training environment requires separate compatibility checks.
 
-GUI 검증에는 기존 Isaac Sim 설치와 **수정하지 않은 고정 Isaac Lab 소스**를 사용합니다. 위 GUI 패키지 전체를 모든 시스템에서 자동 설치해 주는 통합 설치기나 Docker 이미지를 제공하는 것은 아닙니다. NVIDIA EULA 확인과 첫 실행 shader 준비는 Isaac Sim의 안내를 따릅니다. [Isaac Lab 설치 안내](https://isaac-sim.github.io/IsaacLab/v3.0.0-beta2/source/setup/installation/pip_installation.html)
+GUI validation uses an existing Isaac Sim installation and **unmodified, pinned Isaac Lab source**. The repository does not provide a universal installer or Docker image that installs every GUI package on every system. Follow Isaac Sim's instructions for NVIDIA EULA acceptance and first-run shader preparation. [Isaac Lab installation guide](https://isaac-sim.github.io/IsaacLab/v3.0.0-beta2/source/setup/installation/pip_installation.html)
 
-### 6.4 Python과 GPU 선택
+### 6.4 Selecting Python and GPUs
 
-`./scripts/python.sh`의 Python 선택 우선순위는 다음과 같습니다.
+`./scripts/python.sh` selects Python in this order:
 
-1. `WEATHERSTRIP_PYTHON`으로 명시한 실행 파일.
-2. 저장소의 `.venv/bin/python`.
-3. 선택적으로 연결한 `.workspace/toolchain/bin/activate`의 환경.
-4. 현재 `PATH`의 `python3`.
+1. The executable explicitly specified by `WEATHERSTRIP_PYTHON`.
+2. The repository's `.venv/bin/python`.
+3. An optionally bound `.workspace/toolchain/bin/activate` environment.
+4. `python3` from the current `PATH`.
 
-따라서 `.venv`와 `.venv-gui`가 모두 있으면 GUI 실행 시 `WEATHERSTRIP_PYTHON`을 지정해야 합니다. 워크스테이션 전용 `.workspace/` 연결은 Git에 포함하지 않으며, 일반 사용자는 필요하지 않습니다.
+If both `.venv` and `.venv-gui` exist, set `WEATHERSTRIP_PYTHON` explicitly when launching the GUI. Workstation-specific `.workspace/` bindings are ignored by Git and are not required for general use.
 
 ```bash
-# 계산 전용: 물리 GPU 1개만 노출 → 프로세스 내부에서는 cuda:0
+# Compute only: expose physical GPU 1 as cuda:0 inside the process
 WEATHERSTRIP_GPU=1 ./scripts/run_headless.sh
 
-# GUI: 화면 출력 GPU 0, 물리 GPU 1을 따로 사용
+# GUI: render on GPU 0 and simulate on GPU 1
 WEATHERSTRIP_PYTHON="$PWD/.venv-gui/bin/python" \
 WEATHERSTRIP_ISAACLAB="$PWD/.cache/IsaacLab" \
 WEATHERSTRIP_DEVICE=cuda:1 WEATHERSTRIP_RENDER_GPU=0 \
 ./scripts/run_isaaclab.sh
 ```
 
-기본 GUI는 물리와 표시에 GPU 0을 사용합니다. GUI 래퍼는 디스플레이 GPU를 숨기지 않도록 `CUDA_VISIBLE_DEVICES`를 해제합니다. 계산 전용 래퍼는 사용자가 설정한 장치 가시성을 존중합니다.
+By default, the GUI uses GPU 0 for both physics and rendering. Its wrapper unsets `CUDA_VISIBLE_DEVICES` to keep the display GPU visible. The compute-only wrapper respects the caller's device visibility settings.
 
-## 7. 실행
+## 7. Running the demo
 
 ### GUI
 
 ```bash
 ./scripts/run_isaaclab.sh
 
-# 자동 실행 후 5.8초 부근에서 멈춰 인장 장면 관찰
+# Autoplay and pause near 5.8 seconds to inspect the stretched seal
 ./scripts/run_isaaclab.sh --auto-play --pause-at 5.8
 ```
 
-`Newton VBD | WeatherStrip` 패널에서 다음을 사용합니다.
+The `Newton VBD | WeatherStrip` panel provides:
 
-- **Play / Pause / Reset:** 전체 동작 시작, 일시정지, 초기 상태 재구성.
-- **Scene view / Seal close-up:** 로봇 전체 장면과 고무 상세 보기.
-- **Save screenshot:** 현재 뷰포트를 `results/weatherstrip_날짜_시간.png`에 저장.
-- 상태 표시: 동작 단계, 물리 시간, 고무 폭, FPS, 물리·USD 갱신 비용.
+- **Play / Pause / Reset:** Start a full cycle, pause, or reconstruct the initial state.
+- **Scene view / Seal close-up:** View the full robot scene or the seal in detail.
+- **Save screenshot:** Save the viewport to `results/weatherstrip_<date>_<time>.png`.
+- Status: phase, simulation time, seal span, FPS, and physics/USD update costs.
 
-60 Hz는 물리 시간 간격의 기준입니다. 예를 들어 GUI가 20 FPS이면 물리 시간 1초를 진행하는 데 실제 약 3초가 걸립니다. GUI FPS와 실시간 배속 1.0을 혼동하지 않아야 합니다.
+The 60 Hz setting defines simulation time steps. For example, at 20 GUI FPS, advancing one simulated second takes about three wall-clock seconds. GUI FPS is distinct from a real-time factor of 1.0.
 
-### README 동작 GIF 재생성
+### Regenerating the README animation
 
-GUI 환경과 FFmpeg가 필요합니다. 프레임 폴더는 비어 있어야 하며, 완료·물리 검증에 통과한 기록만 GIF로 변환합니다. 카메라는 기록 동안 고정됩니다.
+A GUI environment and FFmpeg are required. The frame directory must be empty. Only a complete recording that passes physics validation can be encoded as a GIF. The camera stays fixed during recording.
 
 ```bash
 ./scripts/run_isaaclab.sh --capture-dir results/demo-frames \
@@ -446,62 +448,62 @@ GUI 환경과 FFmpeg가 필요합니다. 프레임 폴더는 비어 있어야 �
 python3 scripts/make_demo_gif.py results/demo-frames results/dual-arm-cycle.gif
 ```
 
-생성 파일을 확인한 뒤 `docs/media/dual-arm-cycle.gif`로 복사합니다. `capture.json`에는 엔진 버전, 물리 시간, 단계별 프레임과 검증 결과가 기록됩니다. GIF는 960 px 너비, 15 FPS, 무한 반복이며 원본 PNG는 Git에 포함하지 않습니다.
+Inspect the output, then copy it to `docs/media/dual-arm-cycle.gif`. `capture.json` records engine versions, simulation times, phase-by-phase frames, and validation results. The GIF is 960 px wide, plays at 15 FPS, and loops indefinitely. Source PNG frames are not tracked by Git.
 
-### 기록과 검증
+### Recording and validation
 
 ```bash
-# 기본 전체 사이클과 기록 USD
+# Default full cycle and recorded USD
 ./scripts/run_headless.sh
 
-# USD 기록 비용 없이 물리만 검증
+# Validate physics without USD recording overhead
 ./scripts/run_headless.sh --viewer null \
   --metrics-path results/physics_only.json
 
-# 완료 후에도 20초까지 계속 계산하여 적층 안정성 확인
+# Continue simulation to 20 seconds to check stack stability
 ./scripts/run_headless.sh --num-frames 1200 \
   --output-path results/long_settle.usd \
   --metrics-path results/long_settle.json
 
-# 기록된 3개 표면과 모든 법선/의존성 검사
+# Validate all three recorded surfaces, normals, and dependencies
 ./scripts/python.sh scripts/validate_recording.py results/long_settle.usd
 ```
 
-기본 출력은 `results/metrics.json`과 `results/weatherstrip_cycle.usd`입니다. 전체 사이클의 판정은 JSON의 `validation_passed`로 확인합니다. 짧은 smoke 실행은 초기화와 유한 상태만 확인하므로 전체 시나리오 합격을 의미하지 않습니다.
+Default outputs are `results/metrics.json` and `results/weatherstrip_cycle.usd`. Check `validation_passed` in the JSON for the full-cycle result. Short smoke runs only check initialization and finite state; they do not establish that the complete scenario passes.
 
-### 다른 설정 사용
+### Using another configuration
 
 ```bash
 cp config/default.toml config/my_scene.toml
-# config/my_scene.toml 수정
+# Edit config/my_scene.toml
 ./scripts/python.sh scripts/build_asset.py --config config/my_scene.toml
 ./scripts/python.sh scripts/validate_asset.py --config config/my_scene.toml
 ./scripts/run_headless.sh --config config/my_scene.toml
 ./scripts/run_isaaclab.sh --config config/my_scene.toml
 ```
 
-자산 생성 경로는 공통 `assets/weatherstrip/`입니다. 서로 다른 물성 설정을 동시에 실행하려면 별도 체크아웃을 사용하십시오. 다른 설정으로 자산을 만든 뒤 기본 설정을 실행하면 의도적으로 프로파일 불일치 오류가 발생합니다.
+All asset builds write to `assets/weatherstrip/`. Use separate checkouts to run different material configurations concurrently. Building an asset with one configuration and running the default configuration intentionally raises a profile mismatch error.
 
-## 8. 설정과 튜닝
+## 8. Configuration and tuning
 
-기준 설정은 [config/default.toml](config/default.toml)에 있습니다.
+The reference configuration is [config/default.toml](config/default.toml).
 
-| 변경 목적 | 먼저 볼 설정 / 코드 | 함께 확인할 사항 |
+| Goal | Settings / code to inspect first | Also check |
 | --- | --- | --- |
-| 고무가 더 잘 늘어나게 | `stretch_stiffness_n_m`, `shear_stiffness_n_m` | 늘어난 폭, 그립 이탈, 시간 간격 |
-| 타원 형상 유지 | `bend_stiffness_n_m`, `twist_stiffness_n_m` | 복원 속도와 들어 올릴 때의 처짐 |
-| 오래 남는 진동 감소 | 재료 감쇠, `contact_stiffness_n_m`, `contact_damping_n_s_m` | 마지막 1초 RMS 속도, 그립·낙하 회귀 |
-| 두께 변경 | `cross_section_radius_m` | 질량/밀도, 이웃 충돌, 적층 간격, 패드 위치, USD 재생성 |
-| 그립 이탈 감소 | `grip_depth_m`, 구동 목표, mimic 및 ADMM 설정 | 실제 패드 중앙 정렬, 아래 씰 오집기 |
-| 계산 정확도 조정 | `substeps`, `solver_iterations`, `admm_iterations`, `mujoco_iterations` | 전체 동작 합격과 버퍼 초과 |
-| 접촉 수 증가 | `CollisionPipeline(..., rigid_contact_max=8192)` | `peak_rigid_contacts`와 로그의 overflow |
-| 표시 품질 | `skin.py`, `presentation.py` | 물리 구간 수와 별개로 법선·폐곡선 검증 |
+| Increase stretch compliance | `stretch_stiffness_n_m`, `shear_stiffness_n_m` | Stretched span, grip loss, time step |
+| Preserve the elliptical shape | `bend_stiffness_n_m`, `twist_stiffness_n_m` | Recovery speed and sag during lift |
+| Reduce persistent oscillation | Material damping, `contact_stiffness_n_m`, `contact_damping_n_s_m` | Final-second RMS speed and grasp/drop regressions |
+| Change thickness | `cross_section_radius_m` | Mass/density, neighbor collisions, stacking pitch, pad position, USD rebuild |
+| Reduce grip loss | `grip_depth_m`, drive targets, mimic and ADMM settings | Actual pad-center alignment and accidental lower-seal grasp |
+| Adjust numerical accuracy | `substeps`, `solver_iterations`, `admm_iterations`, `mujoco_iterations` | Full-cycle pass and buffer overflow |
+| Increase contact capacity | `CollisionPipeline(..., rigid_contact_max=8192)` | `peak_rigid_contacts` and overflow logs |
+| Improve visual quality | `skin.py`, `presentation.py` | Normals and loop closure independently of physical segment count |
 
-**변수 하나의 효과를 확인한 뒤 전체 사이클을 다시 검증하는 방식**이 유용합니다. 접촉 강성을 높이는 것은 단순한 정확도 향상이 아닙니다. 수치적 조건을 악화시키거나 더 작은 substep·많은 반복을 요구할 수 있습니다. 반대로 낮은 반복 수에서 한 번 집기에 성공했다고 모든 환경에서 같은 안정성을 얻는 것도 아닙니다.
+**Change one variable, inspect its effect, then revalidate the full cycle.** Raising contact stiffness is not simply an accuracy improvement: it can worsen conditioning or require smaller substeps and more iterations. Conversely, a successful grasp at a low iteration count does not guarantee the same stability in every environment.
 
-## 9. 검증과 성능
+## 9. Validation and performance
 
-### 자동 검증
+### Automated validation
 
 ```bash
 ./scripts/python.sh -m unittest discover -s tests -v
@@ -510,140 +512,141 @@ cp config/default.toml config/my_scene.toml
 ./scripts/run_headless.sh
 ```
 
-GitHub Actions는 CPU에서 표면 회귀, 자산 manifest 무결성, Python 및 shell 문법을 확인합니다. **GPU 동작이나 Kit GUI를 GitHub 일반 CPU runner에서 검증한다고 주장하지 않습니다.**
+GitHub Actions checks surface regressions, asset manifest integrity, and Python/shell syntax on CPU. **The standard GitHub CPU runner does not validate GPU dynamics or the Kit GUI.**
 
-전체 동작 검증에는 다음 조건이 포함됩니다.
+Full-cycle validation includes:
 
-| 검증 항목 | 기본 통과 기준 |
+| Check | Default acceptance criterion |
 | --- | --- |
-| 수치 상태 | body / joint 상태에 NaN·Inf 없음 |
-| 양쪽 집기 | 실제 충돌 접촉쌍 관측, 닫힘과 재개방 관측 |
-| 전체 상승 | 맨 위 고무의 최저 구간이 초기 높이보다 120 mm 이상 상승 |
-| 집기 유지 | 고무와 그립 기준점의 최근접 거리 최대 80 mm 이하 |
-| 인장 / 복원 | 목표 인장 폭의 90–115%, 최종 폭은 기준 폭의 75–130% |
-| 하단 씰 유지 | 두 하단 씰의 질량 중심 상승 각각 25 mm 미만 |
-| 자유낙하 | 개방 중 실제 접촉이 없는 공중 구간 및 충분한 초기 여유 높이 |
-| 착지 | 하단 씰과 접촉, 그리퍼 접촉 해제, 최상단이 두 하단 씰보다 위에 위치 |
-| 적층 안정화 | 마지막 1초 각 씰의 평균 RMS 속도 3 mm/s 이하; 개별 구간 최대 20 mm/s 이하 |
-| 버퍼 | 모든 substep에서 관측한 rigid contact 수가 할당 용량 미만 |
+| Numerical state | No NaN or Inf in body or joint states |
+| Bilateral grasp | Actual collision contact pairs, jaw closing, and reopening observed |
+| Whole-seal lift | Lowest segment of the top seal rises at least 120 mm above its initial height |
+| Grasp retention | Maximum nearest distance between rubber and grasp reference points at most 80 mm |
+| Stretch / recovery | 90–115% of target stretched span; final span 75–130% of reference span |
+| Lower-seal retention | Each lower seal's centroid rises less than 25 mm |
+| Free fall | An airborne interval without actual contact during opening, with sufficient initial clearance |
+| Landing | Contact with lower seals, no gripper contact, and top seal above both lower seals |
+| Stack settling | Final-second mean RMS speed at most 3 mm/s per seal; maximum individual segment speed at most 20 mm/s |
+| Buffer capacity | Observed rigid contacts remain below allocated capacity in every substep |
 
-접촉 카운터는 충돌 검출 결과를 기반으로 합니다. 그립력 센서나 실제 접촉 압력 측정값이 아닙니다. 테스트의 최근접 거리 허용치는 수치적 동작 검사 기준이며 로봇의 실제 조작 정밀도 사양이 아닙니다.
+Contact counters come from collision detection, not grip-force sensors or measured contact pressures. The nearest-distance tolerances are numerical behavior checks, not specifications for physical robot manipulation accuracy.
 
-### 관측 결과
+### Observed results
 
-Newton 1.6.0의 새 계산 전용 가상환경에서 기본 13.05초 전체 사이클이 통과했습니다. 전체 고무 상승은 약 0.262 m, 최대 폭은 약 0.761 m였고, 최대 rigid contact 수는 410 / 8,192였습니다. 마지막 1초 평균 RMS 속도는 아래에서부터 약 0.54 / 1.05 / 1.04 mm/s였습니다. 고정된 Isaac Lab 원본 소스로 실행한 GUI에서도 전체 사이클이 통과했습니다.
+A fresh Newton 1.6.0 compute-only environment passed the complete default 13.05-second cycle. Whole-seal lift was approximately 0.262 m, maximum span approximately 0.761 m, and peak rigid contacts 410 / 8,192. Mean RMS speeds during the final second were approximately 0.54 / 1.05 / 1.04 mm/s from bottom to top. The GUI using the pinned original Isaac Lab source also passed the complete cycle.
 
-적층 안정화의 비교 지표는 구간 중심의 프레임 간 변위로부터 계산합니다.
+Stack-settling comparison metrics are computed from frame-to-frame displacement of segment centers.
 
 $$
 v_{i,n}=\frac{\lVert p_{i,n}-p_{i,n-1}\rVert}{\Delta t_{\mathrm{frame}}},\qquad
 v_{\mathrm{RMS},n}=\sqrt{\frac{1}{N}\sum_i v_{i,n}^2}
 $$
 
-Newton 1.5 개발 당시 동일한 12–13초 구간에서 최상단 씰의 평균 RMS 속도는 **16.85 → 2.13 mm/s**로 감소했습니다. 20초까지 물리를 계속 계산했을 때에는 약 **0.96 mm/s**였습니다. 정지 판정으로 속도를 없앤 결과가 아닙니다. 이 수치는 예시 재료와 장면의 관측값이며 실측 재료 검증값은 아닙니다. 공개용 지표는 [docs/validation/reference-results.json](docs/validation/reference-results.json)에 정리했습니다.
+During Newton 1.5 development, the top seal's mean RMS speed over the same 12–13-second interval decreased from **16.85 to 2.13 mm/s**. Continuing physics to 20 seconds yielded approximately **0.96 mm/s**. These results were not obtained by zeroing velocities after a rest test. They are observations for this illustrative material and scene, not validation against measured material behavior. Public metrics are recorded in [docs/validation/reference-results.json](docs/validation/reference-results.json).
 
-### 성능 개선
+### Performance improvements
 
-아래 비교는 Newton 1.5 개발 당시의 기록입니다. Newton 1.6의 재검증 결과와 구분합니다. GIF 캡처 중의 처리 속도는 성능 측정으로 사용하지 않습니다.
+The following comparisons are historical Newton 1.5 development results, separate from Newton 1.6 revalidation. Throughput during GIF capture is not used as a performance benchmark.
 
-| 측정 경로 | 이전 | 개선 후 |
+| Measured path | Before | After |
 | --- | ---: | ---: |
-| 물리 + USD, Kit 제외 | 단일 씰 / Robotiq 약 6.06 FPS | 3개 씰 / Robotiq 약 30.43 FPS |
-| 실제 Kit GUI 전체 사이클 | 사용자 관측 약 5 FPS | 검증 사이클 평균 약 20 FPS |
+| Physics + USD, excluding Kit | Single seal / Robotiq: approximately 6.06 FPS | Three seals / Robotiq: approximately 30.43 FPS |
+| Full cycle in the actual Kit GUI | Approximately 5 FPS observed by the user | Approximately 20 FPS averaged over a validated cycle |
 
-첫 번째 행은 같은 측정 스크립트 방식으로 초기 10프레임을 제외하고 90프레임을 측정한 결과입니다. 서로 다른 장면과 측정 시점의 비교이며 외부 GPU 부하까지 통제한 엔진 벤치마크가 아닙니다. 50 FPS 달성이나 다른 장비에서의 동일 성능을 보장하지 않습니다.
+The first row uses the same profiling method: exclude ten initial frames and measure the next 90. It compares different scenes and measurement times, not an engine benchmark with external GPU load controlled. Neither 50 FPS nor identical performance on other hardware is guaranteed.
 
-개선한 부분은 다음과 같습니다.
+Improvements include:
 
-- 물리·역기구학 CUDA graph 재사용으로 CPU launch 비용 감소.
-- 세 씰의 표시 표면을 GPU에서 계산하고 host 전송 통합.
-- 접촉 통계를 GPU에서 소량의 카운터로 집계.
-- USD의 고정 형상·재질·속성 캐시, 동적 위치·회전만 갱신.
-- MuJoCo 제약 버퍼 `njmax`를 4,096에서 128로 축소. 실제 mimic equality는 10개.
-- rigid contact 버퍼를 55,296에서 8,192로 축소하고 실제 최대 사용량 검사.
-- 반복 횟수를 줄인 뒤 그립, 낙하, 안정화가 함께 통과하는지 재검증.
+- Reusing physics and IK CUDA graphs to reduce CPU launch overhead.
+- Computing all three render surfaces on the GPU and consolidating host transfers.
+- Reducing contact statistics to a small set of GPU counters.
+- Caching static USD geometry, materials, and attributes; updating only dynamic positions and rotations.
+- Reducing MuJoCo constraint capacity `njmax` from 4,096 to 128 for ten actual mimic equalities.
+- Reducing rigid-contact capacity from 55,296 to 8,192 and checking peak usage.
+- Revalidating grasping, falling, and settling together after reducing iteration counts.
 
 ```bash
 ./scripts/python.sh scripts/profile_runtime.py \
   --frames 90 --output results/performance.json
 ```
 
-이 스크립트의 `pipeline_fps`에는 Kit 표시 시간이 포함되지 않습니다. GUI의 `results/gui_performance.json`과 직접 같은 값으로 비교하면 안 됩니다. 첫 실행 JIT 컴파일과 shader 준비 시간도 정상 상태 FPS와 구분해야 합니다.
+This script's `pipeline_fps` excludes Kit rendering time and should not be directly equated with the GUI's `results/gui_performance.json`. First-run JIT compilation and shader preparation are also separate from steady-state FPS.
 
-## 10. 저장소 구성
+## 10. Repository layout
 
 ```text
 NewtonVBD_WeatherStrip/
-├── README.md                       # 설계·이론·설치·운영 설명
+├── README.md                       # Design, theory, installation, and operation (English)
+├── README_KR.md                    # Korean documentation
 ├── LICENSE / THIRD_PARTY_NOTICES.md
-├── pyproject.toml                  # Python 배포 메타데이터와 직접 의존성
+├── pyproject.toml                  # Python package metadata and direct dependencies
 ├── requirements/compute-constraints.txt
-├── config/default.toml             # 기준 장면·물성·제어·솔버 설정
+├── config/default.toml             # Reference scene, material, control, and solver settings
 ├── assets/
-│   ├── manifest.json               # 공식 로봇 자산 출처와 체크섬
-│   └── weatherstrip/               # 생성한 단일 SimReady 후보 자산
+│   ├── manifest.json               # Official robot asset sources and checksums
+│   └── weatherstrip/               # Generated single SimReady candidate asset
 ├── src/newton_weatherstrip/
-│   ├── config.py / asset.py        # 설정 검증, USD·물성 계약
-│   ├── geometry.py / trajectory.py # 중심선과 양팔 동작 계획
-│   ├── simulation.py               # 조립·IK·솔버 결합·물리 검증
-│   ├── skin.py / presentation.py   # GPU 보간·고무 표시 표면
-│   ├── fast_usd.py                 # 동적 USD 갱신 최적화
-│   └── doctor.py                   # 자산·엔진·조립 사전 점검
+│   ├── config.py / asset.py        # Configuration validation and USD/material contracts
+│   ├── geometry.py / trajectory.py # Centerline and dual-arm motion planning
+│   ├── simulation.py               # Assembly, IK, solver coupling, and physics checks
+│   ├── skin.py / presentation.py   # GPU interpolation and rubber display surfaces
+│   ├── fast_usd.py                 # Optimized dynamic USD updates
+│   └── doctor.py                   # Asset, engine, and assembly preflight
 ├── scripts/
-│   ├── fetch_assets.py             # 고정된 공식 자산 다운로드
+│   ├── fetch_assets.py             # Pinned official asset downloads
 │   ├── build_asset.py / validate_asset.py
 │   ├── validate_recording.py / profile_runtime.py
 │   └── python.sh / run_headless.sh / run_isaaclab.sh / isaaclab_demo.py
-├── tests/                          # CPU에서 실행 가능한 회귀 검사
-├── docs/media/                     # 실제 GUI 캡처
-├── docs/validation/                # 로컬 경로를 제거한 공개 검증 지표
+├── tests/                          # CPU regression tests
+├── docs/media/                     # Actual GUI captures
+├── docs/validation/                # Public validation metrics without local paths
 └── .github/workflows/validate.yml   # CPU CI
 ```
 
-다운로드한 로봇 자산, `.venv*`, `.workspace`, 캐시 및 `results/`는 Git에 포함하지 않습니다. 체크아웃 안에서 editable 설치로 실행하는 저장소 구조이며, 독립 wheel 하나만으로 로봇 자산과 Kit까지 배포하는 패키지가 아닙니다.
+Downloaded robot assets, `.venv*`, `.workspace`, caches, and `results/` are not tracked by Git. The repository is designed to run from an editable installation within a checkout, not as a standalone wheel that also distributes robot assets and Kit.
 
-## 11. 문제 해결
+## 11. Troubleshooting
 
-| 증상 | 확인 / 조치 |
+| Symptom | Check / action |
 | --- | --- |
-| `No module named newton` 또는 `pxr` | `WEATHERSTRIP_PYTHON`이 가리키는 Python에 프로젝트를 설치했는지 확인 |
-| `No module named isaaclab` | 고정 Isaac Lab 소스를 받고 `WEATHERSTRIP_ISAACLAB`을 checkout 루트로 지정 |
-| GUI 대신 계산 전용 환경이 선택됨 | `.venv`가 우선됨. `WEATHERSTRIP_PYTHON`을 `.venv-gui/bin/python`으로 명시 |
-| `USD material profile differs from config` | 같은 `--config`로 `build_asset.py`를 다시 실행 |
-| 자산 누락 / checksum mismatch | `fetch_assets.py --offline`로 확인. 수정본을 보관한 뒤 원본을 별도 디렉터리에 다시 다운로드해 비교 |
-| CUDA 장치 번호 오류 | 계산 전용은 가시 GPU 재번호가 적용됨. GUI의 `WEATHERSTRIP_DEVICE`와 구분 |
-| Vulkan 표시 오류 / 검은 창 | 데스크톱 세션, 드라이버, 표시 GPU를 확인. 디스플레이 GPU를 CUDA 격리로 숨기지 않음 |
-| GUI에 `--headless`를 추가하면 conditional kernel 오류 | Kit GUI 경로는 데스크톱 표시 모드로 검증했습니다. 화면 없는 물리 실행은 `run_headless.sh`를 사용하십시오. |
-| 첫 실행만 매우 느림 | Warp JIT 및 Kit shader 준비 후 정상 상태 구간에서 측정 |
-| 집다가 한쪽이 미끄러짐 | 패드 중앙 정렬, 17 mm 깊이, 변경된 두께·물성, mimic/ADMM 반복 수 확인 |
-| 적층 고무가 계속 떨림 | 재료 굽힘과 접촉 강성을 구분해 확인. 임의 수면 처리 전에 RMS 지표 확인 |
-| 설정을 바꿨는데 기존 GUI가 그대로임 | 물성 변경 후 자산 재생성 및 Reset. Python 구현 코드를 바꾼 경우 GUI 재시작 |
-| `--num-frames 5` 결과의 `validation_passed=false` | 짧은 초기화 시험은 전체 사이클 판정 대상이 아님. 기본 전체 실행으로 확인 |
+| `No module named newton` or `pxr` | Install the project into the Python selected by `WEATHERSTRIP_PYTHON` |
+| `No module named isaaclab` | Obtain the pinned Isaac Lab source and point `WEATHERSTRIP_ISAACLAB` to its checkout root |
+| Compute environment selected for the GUI | `.venv` takes precedence; explicitly set `WEATHERSTRIP_PYTHON` to `.venv-gui/bin/python` |
+| `USD material profile differs from config` | Re-run `build_asset.py` with the same `--config` |
+| Missing assets / checksum mismatch | Run `fetch_assets.py --offline`; preserve modified files, then download originals to a separate directory for comparison |
+| Incorrect CUDA device index | Compute-only execution renumbers visible GPUs; distinguish this from GUI `WEATHERSTRIP_DEVICE` |
+| Vulkan error / black window | Check the desktop session, driver, and display GPU; do not hide it with CUDA isolation |
+| Conditional-kernel error after adding `--headless` to the GUI | The Kit GUI path was validated in desktop mode; use `run_headless.sh` for physics without a display |
+| Only the first run is slow | Measure steady state after Warp JIT and Kit shader preparation |
+| One side slips during grasping | Check pad-center alignment, 17 mm depth, thickness/material changes, and mimic/ADMM iterations |
+| Stacked seals keep oscillating | Inspect material bending and contact stiffness separately; check RMS metrics before introducing sleep |
+| Existing GUI does not reflect changes | Rebuild assets and Reset after material changes; restart the GUI after Python implementation changes |
+| `validation_passed=false` with `--num-frames 5` | Short initialization tests do not cover full-cycle acceptance; run the complete default cycle |
 
-오류를 제보할 때에는 사용한 commit, OS/GPU/드라이버, Python 및 엔진 버전, 수정한 TOML, 해당 검증 JSON과 오류 끝부분을 함께 제공하면 재현하기 쉽습니다. 자격 증명이나 전체 환경 변수는 포함하지 마십시오.
+For reproducible bug reports, include the commit, OS/GPU/driver, Python and engine versions, modified TOML, relevant validation JSON, and the end of the error log. Do not include credentials or a complete environment-variable dump.
 
-## 12. 확장과 모델의 한계
+## 12. Extensions and model limitations
 
-현실적인 제품 검증이나 학습 환경으로 확장하려면 다음 작업이 필요합니다.
+Extending this example to product validation or a training environment requires:
 
-- **재료 식별:** 실제 단면 CAD, 질량, 인장·굽힘·압축·마찰 시험으로 강성·감쇠를 보정합니다. 인장 거동과 단면 압축을 같은 계수 하나로 맞추면 안 됩니다.
-- **단면 모델 확장:** 중공 벌브, 립, 스폰지 EPDM, 이방성, 히스테리시스, 점탄성 및 접촉 압력을 다루려면 적절한 체적/단면 모델이 필요합니다.
-- **센서·제어 확장:** 현재 ground-truth 집기 위치를 카메라/접촉 센서 기반 추정으로 교체하고 실패 감지·재시도를 설계합니다.
-- **학습 환경 확장:** observation, action, reward, reset, 병렬 환경 및 종료 조건을 정의해 별도의 Isaac Lab 환경으로 구성합니다. 현재 GUI bridge를 그대로 학습 환경이라고 부르면 안 됩니다.
-- **배포 검증 확장:** 형상·재질 조합별 회귀, 장치별 성능, 힘/에너지 오차, 다회 반복 성공률과 공식 자산 검증 절차를 추가합니다.
+- **Material identification:** Calibrate stiffness and damping using actual cross-section CAD, mass, and tensile/bending/compression/friction tests. A single coefficient should not represent both tensile behavior and cross-sectional compression.
+- **Cross-section modeling:** Use suitable volumetric or cross-sectional models for hollow bulbs, lips, sponge EPDM, anisotropy, hysteresis, viscoelasticity, and contact pressure.
+- **Sensing and control:** Replace ground-truth grasp locations with camera/contact-sensor estimates and design failure detection and retries.
+- **Training integration:** Define observations, actions, rewards, reset behavior, parallel environments, and termination conditions in a separate Isaac Lab environment. The existing GUI bridge alone is not a training environment.
+- **Distribution validation:** Add geometry/material regressions, device-specific performance tests, force/energy error checks, repeated success-rate measurements, and formal asset validation procedures.
 
-현재 테스트는 이 데모의 동작과 수치적 안정성을 확인합니다. 밀봉 성능, 누설, 내구성, 노화 또는 실제 로봇 안전성을 예측·인증하지 않습니다.
+Current tests check this demo's behavior and numerical stability. They do not predict or certify sealing performance, leakage, durability, aging, or real robot safety.
 
-## 13. 참고 문헌과 라이선스
+## 13. References and licensing
 
-| 주제 | 원문 |
+| Topic | Source |
 | --- | --- |
-| VBD | Chen et al., *Vertex Block Descent*, SIGGRAPH 2024 — [프로젝트와 논문](https://graphics.cs.utah.edu/research/projects/vbd/) |
-| AVBD | Giles et al., *Augmented Vertex Block Descent*, SIGGRAPH 2025 — [프로젝트와 논문](https://graphics.cs.utah.edu/research/projects/avbd/) |
-| ADMM | Boyd et al., *Distributed Optimization and Statistical Learning via ADMM*, 2011 — [원문](https://stanford.edu/~boyd/papers/admm_distr_stats.html) |
-| Newton 1.6 | [소스](https://github.com/newton-physics/newton/tree/v1.6.0), [VBD API](https://newton-physics.github.io/newton/1.6.0/api/_generated/newton.solvers.SolverVBD.html), [결합 솔버](https://newton-physics.github.io/newton/1.6.0/concepts/coupling.html) |
-| MuJoCo Warp | [공식 저장소](https://github.com/google-deepmind/mujoco_warp), [Newton 어댑터](https://newton-physics.github.io/newton/1.6.0/solvers/mujoco.html) |
-| Isaac Lab | [공식 저장소](https://github.com/isaac-sim/IsaacLab), [검증 소스 commit](https://github.com/isaac-sim/IsaacLab/tree/2e44ddb2e19536579140496023b5ccb060bc4152) |
-| 로봇 자산 | [NVIDIA Isaac Sim 로봇 안내](https://docs.isaacsim.omniverse.nvidia.com/latest/assets/usd_assets_robots_manipulator.html), [SimReady Foundation](https://github.com/NVIDIA/simready-foundation) |
+| VBD | Chen et al., *Vertex Block Descent*, SIGGRAPH 2024 — [project and paper](https://graphics.cs.utah.edu/research/projects/vbd/) |
+| AVBD | Giles et al., *Augmented Vertex Block Descent*, SIGGRAPH 2025 — [project and paper](https://graphics.cs.utah.edu/research/projects/avbd/) |
+| ADMM | Boyd et al., *Distributed Optimization and Statistical Learning via ADMM*, 2011 — [paper](https://stanford.edu/~boyd/papers/admm_distr_stats.html) |
+| Newton 1.6 | [Source](https://github.com/newton-physics/newton/tree/v1.6.0), [VBD API](https://newton-physics.github.io/newton/1.6.0/api/_generated/newton.solvers.SolverVBD.html), [coupled solvers](https://newton-physics.github.io/newton/1.6.0/concepts/coupling.html) |
+| MuJoCo Warp | [Official repository](https://github.com/google-deepmind/mujoco_warp), [Newton adapter](https://newton-physics.github.io/newton/1.6.0/solvers/mujoco.html) |
+| Isaac Lab | [Official repository](https://github.com/isaac-sim/IsaacLab), [validated source commit](https://github.com/isaac-sim/IsaacLab/tree/2e44ddb2e19536579140496023b5ccb060bc4152) |
+| Robot assets | [NVIDIA Isaac Sim robot guide](https://docs.isaacsim.omniverse.nvidia.com/latest/assets/usd_assets_robots_manipulator.html), [SimReady Foundation](https://github.com/NVIDIA/simready-foundation) |
 
-프로젝트 코드는 [Apache-2.0](LICENSE)으로 제공합니다. 외부 엔진과 로봇 자산에는 각 원저작권자의 조건이 적용됩니다. 상세 내용은 [외부 프로젝트 및 자산 고지](THIRD_PARTY_NOTICES.md)를 참고하십시오.
+Project code is licensed under [Apache-2.0](LICENSE). External engines and robot assets remain subject to their respective owners' terms. See [third-party project and asset notices](THIRD_PARTY_NOTICES.md).
